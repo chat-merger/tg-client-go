@@ -22,11 +22,13 @@ default: run
 
 run *FLAGS:
     go run  {{FLAGS}} ./cmd/bot/main.go \
+    --host='localhost:32256' \
     --tg-token=$TGTOKEN \
+    --tg-chat-id=-4052858574 \
+    --tg-x-api-key=7f86f4af-8119-468f-9aee-1c40371061d4 \
     --vk-token=$VKTOKEN \
-    --server-host='localhost:32256' \
-    --tg-chat-id='-4052858574' \
-    --x-api-key='7f86f4af-8119-468f-9aee-1c40371061d4'
+    --vk-peer-id=2000000001 \
+    --vk-x-api-key='37030582-bc1f-42f5-b4cd-5180b556a324' \
 
 
 build *FLAGS:

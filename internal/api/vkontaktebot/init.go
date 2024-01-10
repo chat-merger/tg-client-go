@@ -28,7 +28,7 @@ func InitClient(cfg Config) (*Client, error) {
 		vk:     vk,
 		lp:     lp,
 		conn:   conn,
-		chatID: cfg.ChatID,
+		peerID: cfg.PeerId,
 	}
 
 	c.gotgbotSetup()

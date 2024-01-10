@@ -10,12 +10,12 @@ type Client struct {
 	vk     *api.VK
 	lp     *longpoll.LongPoll
 	conn   merger.Conn
-	chatID int64
+	peerID int
 }
 
 type Config struct {
 	Token  string
 	ApiKey string
-	ChatID int64
+	PeerId int
 	Server merger.MergerServer
 }

@@ -3,11 +3,10 @@ package vkontaktebot
 import (
 	"context"
 	"fmt"
-	"github.com/PaulSonOfLars/gotgbot/v2"
+	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/events"
 	"log"
-	"merger-adapter/internal/debug"
 	"merger-adapter/internal/service/merger"
 	"strconv"
 	"time"
@@ -18,26 +17,32 @@ func (c *Client) gotgbotSetup() {
 	c.lp.MessageNew(c.onMessage)
 }
 
-func (c *Client) filter(msg *gotgbot.Message) bool {
-	return msg.Chat.Id == c.chatID && msg.Text != ""
-}
-
 func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
-	debug.Print(obj)
+	if obj.Message.PeerID != c.peerID {
+		return
+	}
+	//debug.Print(obj)
 	var replyedId *string
 	if obj.Message.ReplyMessage != nil {
 		id := strconv.Itoa(obj.Message.ReplyMessage.ID)
 		replyedId = &id
 	}
-	author := "vk user"
+	var author *string
 
+	usrs, _ := c.vk.UsersGet(api.Params{
+		"user_ids": obj.Message.FromID,
+	})
+	if len(usrs) > 0 {
+		fname := usrs[0].FirstName + " " + usrs[0].LastName
+		author = &fname
+	}
 	msg := merger.CreateMessage{
 		ReplyId: (*merger.ID)(replyedId),
 		Date:    time.Unix(int64(obj.Message.Date), 0),
-		Author:  &author,
+		Author:  author,
 		Silent:  bool(obj.Message.IsSilent),
 		Body: &merger.BodyText{
-			Format: "", // todo
+			Format: merger.Plain,
 			Value:  obj.Message.Text,
 		},
 	}
@@ -55,18 +60,9 @@ func (c *Client) listenServerMessages() error {
 			return fmt.Errorf("receive update: %s", err)
 		}
 		b := params.NewMessagesSendBuilder()
-		b.Message(fmt.Sprintf(
-			"- %v\n- %v\n- %v\n- %v\n- %v\n- %v\n- %v\n",
-			msg.Id,
-			msg.ReplyId,
-			msg.Date,
-			msg.Author,
-			msg.From,
-			msg.Silent,
-			msg.Body,
-		))
+		b.Message(msg.FormatShort())
 		b.RandomID(0)
-		b.PeerID(int(c.chatID))
+		b.PeerID(c.peerID)
 
 		_, err = c.vk.MessagesSend(b.Params)
 		if err != nil {

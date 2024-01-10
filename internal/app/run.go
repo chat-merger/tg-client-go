@@ -25,10 +25,10 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	log.Println(msgs.InitGrpcMergerClientInitialized)
 
 	tgbClient, err := telegrambot.InitClient(telegrambot.Config{
-		Token:  cfg.TelegramBotToken,
-		ChatID: cfg.TelegramChat,
+		Token:  cfg.TgBotToken,
+		ChatID: cfg.TgChat,
 		Server: server,
-		ApiKey: cfg.XApiKey,
+		ApiKey: cfg.TgXApiKey,
 	})
 	if err != nil {
 		return fmt.Errorf("tg client initialization: %s", err)
@@ -37,10 +37,10 @@ func Run(ctx context.Context, cfg *config.Config) error {
 	go app.run(tgbClient, "vkontakte adapter")
 
 	vkbClient, err := vkontaktebot.InitClient(vkontaktebot.Config{
-		Token:  cfg.VkontakteBotToken,
-		ChatID: 457239658,
+		Token:  cfg.VkBotToken,
+		PeerId: cfg.VkPeer,
 		Server: server,
-		ApiKey: cfg.XApiKey,
+		ApiKey: cfg.VkXApiKey,
 	})
 	if err != nil {
 		return fmt.Errorf("vk client initialization: %s", err)
