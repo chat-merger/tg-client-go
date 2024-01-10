@@ -6,6 +6,7 @@ import (
 	"log"
 	grpcside "merger-adapter/internal/api/grpc_merger_client"
 	"merger-adapter/internal/api/telegrambot"
+	"merger-adapter/internal/api/vkontaktebot"
 	"merger-adapter/internal/common/msgs"
 	"merger-adapter/internal/config"
 	"merger-adapter/internal/service/runnable"
@@ -33,8 +34,20 @@ func Run(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("tg client initialization: %s", err)
 	}
 	log.Println(msgs.TelegramAdapterInitialized)
+	go app.run(tgbClient, "vkontakte adapter")
 
-	go app.run(tgbClient, "telegram adapter")
+	vkbClient, err := vkontaktebot.InitClient(vkontaktebot.Config{
+		Token:  cfg.VkontakteBotToken,
+		ChatID: 457239658,
+		Server: server,
+		ApiKey: cfg.XApiKey,
+	})
+	if err != nil {
+		return fmt.Errorf("vk client initialization: %s", err)
+	}
+	log.Println(msgs.VkontakteAdapterInitialized)
+
+	go app.run(vkbClient, "vkontakte adapter")
 
 	log.Println(msgs.ApplicationStarted)
 

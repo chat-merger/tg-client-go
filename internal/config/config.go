@@ -8,10 +8,11 @@ import (
 )
 
 type Config struct {
-	TelegramBotToken string
-	ServerHost       string
-	TelegramChat     int64
-	XApiKey          string
+	TelegramBotToken  string
+	VkontakteBotToken string
+	ServerHost        string
+	TelegramChat      int64
+	XApiKey           string
 }
 
 // Flag-feature part:
@@ -26,6 +27,7 @@ func InitFlagSet() *FlagSet {
 	cfgFs := new(FlagSet)
 	cfgFs.fs = flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 	cfgFs.fs.StringVar(&cfgFs.cfg.TelegramBotToken, flagTelegramBotToken, "", "a string or line consisting of letters and numbers which is require in order for authorizing the bot and for sending requests to the Bot API")
+	cfgFs.fs.StringVar(&cfgFs.cfg.VkontakteBotToken, flagVkontakteBotToken, "", "a string or line consisting of letters and numbers which is require in order for authorizing the bot and for sending requests to the Bot API")
 	cfgFs.fs.StringVar(&cfgFs.cfg.ServerHost, flagServerHost, "", "host for connect to chat-merger-server")
 	cfgFs.fs.Int64Var(&cfgFs.cfg.TelegramChat, flagTelegramChat, 0, "id of telegram chat, int64")
 	cfgFs.fs.StringVar(&cfgFs.cfg.XApiKey, flagXApiKey, "", "api key of chat-merger client (adapter)")
@@ -35,16 +37,20 @@ func InitFlagSet() *FlagSet {
 // cleanLastCfg clean parsed values
 func (c *FlagSet) cleanLastCfg() {
 	c.cfg.TelegramBotToken = ""
+	c.cfg.VkontakteBotToken = ""
 	c.cfg.ServerHost = ""
+	c.cfg.TelegramChat = 0
+	c.cfg.XApiKey = ""
 }
 
 // Flag names:
 
 const (
-	flagTelegramBotToken = "token"
-	flagServerHost       = "server-host"
-	flagTelegramChat     = "tg-chat-id"
-	flagXApiKey          = "x-api-key"
+	flagTelegramBotToken  = "tg-token"
+	flagVkontakteBotToken = "vk-token"
+	flagServerHost        = "server-host"
+	flagTelegramChat      = "tg-chat-id"
+	flagXApiKey           = "x-api-key"
 )
 
 // Usage printing "how usage flags" message
@@ -66,9 +72,17 @@ func (c *FlagSet) Parse(args []string) (*Config, error) {
 	if newCfg.TelegramBotToken == "" {
 		return nil, missingArgExit(flagTelegramBotToken)
 	}
-
+	if newCfg.VkontakteBotToken == "" {
+		return nil, missingArgExit(flagVkontakteBotToken)
+	}
 	if newCfg.ServerHost == "" {
 		return nil, missingArgExit(flagServerHost)
+	}
+	if newCfg.TelegramChat == 0 {
+		return nil, missingArgExit(flagTelegramChat)
+	}
+	if newCfg.XApiKey == "" {
+		return nil, missingArgExit(flagXApiKey)
 	}
 
 	return &newCfg, nil
