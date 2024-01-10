@@ -1,0 +1,5 @@
+bin
+/api
+/internal/api/pb
+.env
+.idea
