@@ -1,4 +1,4 @@
-package config
+package app
 
 import (
 	"errors"
@@ -15,6 +15,7 @@ type Config struct {
 	VkBotToken string
 	VkPeer     int
 	VkXApiKey  string
+	DbFile     string
 }
 
 // Flag-feature part:
@@ -35,6 +36,7 @@ func InitFlagSet() *FlagSet {
 	cfgFs.fs.StringVar(&cfgFs.cfg.VkBotToken, flagVkBotToken, "", "a string or line consisting of letters and numbers which is require in order for authorizing the bot and for sending requests to the Bot API")
 	cfgFs.fs.IntVar(&cfgFs.cfg.VkPeer, flagVkPeer, 0, "id of vkontakte peer")
 	cfgFs.fs.StringVar(&cfgFs.cfg.VkXApiKey, flagVkXApiKey, "", "api key of chat-merger vkontakte adapter")
+	cfgFs.fs.StringVar(&cfgFs.cfg.DbFile, flagDbFile, "", "path to sqlite database source")
 	return cfgFs
 }
 
@@ -47,6 +49,7 @@ func (c *FlagSet) cleanLastCfg() {
 	c.cfg.VkBotToken = ""
 	c.cfg.VkPeer = 0
 	c.cfg.VkXApiKey = ""
+	c.cfg.DbFile = ""
 }
 
 // Flag names:
@@ -59,6 +62,7 @@ const (
 	flagVkBotToken = "vk-token"
 	flagVkPeer     = "vk-peer-id"
 	flagVkXApiKey  = "vk-x-api-key"
+	flagDbFile     = "db"
 )
 
 // Usage printing "how usage flags" message
@@ -77,6 +81,7 @@ func (c *FlagSet) Parse(args []string) (*Config, error) {
 	newCfg := c.cfg // copy parsed values
 	c.cleanLastCfg()
 
+	// check what all fields defined
 	switch {
 	case newCfg.ServerHost == "":
 		return nil, missingArgExit(flagServerHost)
@@ -92,6 +97,8 @@ func (c *FlagSet) Parse(args []string) (*Config, error) {
 		return nil, missingArgExit(flagVkPeer)
 	case newCfg.VkXApiKey == "":
 		return nil, missingArgExit(flagVkXApiKey)
+	case newCfg.DbFile == "":
+		return nil, missingArgExit(flagDbFile)
 	}
 
 	return &newCfg, nil

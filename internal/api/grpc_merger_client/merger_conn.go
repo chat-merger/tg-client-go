@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"merger-adapter/internal/api/pb"
-	"merger-adapter/internal/debug"
+	"merger-adapter/internal/component/debug"
 	"merger-adapter/internal/service/merger"
 )
 

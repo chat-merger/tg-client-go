@@ -8,11 +8,10 @@ import (
 	"merger-adapter/internal/api/telegrambot"
 	"merger-adapter/internal/api/vkontaktebot"
 	"merger-adapter/internal/common/msgs"
-	"merger-adapter/internal/config"
 	"merger-adapter/internal/service/runnable"
 )
 
-func Run(ctx context.Context, cfg *config.Config) error {
+func Run(ctx context.Context, cfg *Config) error {
 
 	app, errCh := newApplication(ctx)
 

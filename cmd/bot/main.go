@@ -6,7 +6,6 @@ import (
 	"log"
 	"merger-adapter/internal/app"
 	"merger-adapter/internal/common/msgs"
-	"merger-adapter/internal/config"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,7 +23,7 @@ func main() {
 	gracefulShutdown(cancel)
 }
 
-func runApplication(ctx context.Context, cfg *config.Config) {
+func runApplication(ctx context.Context, cfg *app.Config) {
 	log.Println(msgs.ApplicationStart)
 	err := app.Run(ctx, cfg)
 	if err != nil {
@@ -33,13 +32,13 @@ func runApplication(ctx context.Context, cfg *config.Config) {
 	os.Exit(0)
 }
 
-func initConfig() *config.Config {
-	cfgFs := config.InitFlagSet()
+func initConfig() *app.Config {
+	cfgFs := app.InitFlagSet()
 
 	cfg, err := cfgFs.Parse(os.Args[1:])
 	if err != nil {
 		log.Printf("config FlagSet initialization: %s", err)
-		if errors.Is(err, config.WrongArgumentError) {
+		if errors.Is(err, app.WrongArgumentError) {
 			cfgFs.Usage()
 		}
 		os.Exit(2)

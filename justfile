@@ -18,6 +18,9 @@ generated_pb_package_destination := "./internal/api"
 # build settings:
 build_output_file := "./bin/tg-client-go"
 
+# sqlite database file place
+sqlite_db_source_file := "database.db"
+
 default: run
 
 run *FLAGS:
@@ -28,7 +31,8 @@ run *FLAGS:
     --tg-x-api-key=e9a8a738-fc38-4b4c-be05-9b9267372b94 \
     --vk-token=$VKTOKEN \
     --vk-peer-id=2000000002 \
-    --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f
+    --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f \
+    --db={{sqlite_db_source_file}}
 
 build *FLAGS:
     go build -o {{build_output_file}} {{FLAGS}}  ./cmd/bot
@@ -37,11 +41,13 @@ build *FLAGS:
 #   0. go programming language;
 #   1. proto compiler - protoc;
 #   2. add to .bashrc PATH="$PATH:$(go env GOPATH)/bin"
+#   3. sqlite3
 init:
     go mod tidy
     just install-deps
     just get-api
     just gen-pb
+    sqlite3 {{sqlite_db_source_file}} < ./scripts/sqlite_ddl.sql
 
 gen-pb out=generated_pb_package_destination scheme=(api_scheme_destination+"/"+api_file_name):
     mkdir -p {{out}}
