@@ -5,13 +5,13 @@ import "time"
 type ID string
 
 type Message struct {
-	Id      ID
-	ReplyId *ID
-	Date    time.Time
-	Author  *string
-	From    string // client name
-	Silent  bool
-	Body    Body
+	Id       ID
+	ReplyId  *ID
+	Date     time.Time
+	Username *string
+	From     string // client name
+	Silent   bool
+	Body     Body
 }
 
 type Body interface{ IsBody() }
@@ -54,7 +54,7 @@ const (
 type CreateMessage struct {
 	ReplyId *ID
 	Date    time.Time
-	Author  *string
+	Uername *string
 	Silent  bool
 	Body    Body
 }

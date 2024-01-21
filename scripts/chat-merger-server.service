@@ -1,0 +1,21 @@
+[Unit]
+Description=Chat merger telegram client impl on golang
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+TimeoutStartSec=30
+EnvironmentFile=/etc/tg-client-go/env.conf
+ExecStart=/usr/local/bin/tg-client-go \
+        --host=${API_HOST} \
+        --tg-token=${TG_TOKEN} \
+        --tg-chat-id=${TG_CHAT_ID} \
+        --tg-x-api-key=${TG_X_API_KEY} \
+        --vk-token=${VK_TOKEN} \
+        --vk-peer-id=${VK_PEER_ID} \
+        --vk-x-api-key=${VK_X_API_KEY}
+
+[Install]
+WantedBy=default.target

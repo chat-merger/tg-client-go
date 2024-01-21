@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package mergerapi;
+import "google/protobuf/empty.proto";
+
+option go_package = "./pb";
+option java_multiple_files = true;
+option java_outer_classname = "MergerApi";
+
+
+service BaseService {
+  rpc Updates(google.protobuf.Empty) returns (stream Response);
+  rpc SendMessage(Request) returns (Response);
+}
+
+
+message Text {
+  Format format = 1;
+  string value = 2;
+
+  enum Format {
+    PLAIN = 0;
+    MARKDOWN = 1;
+  }
+}
+message Media {
+  Type type = 1;
+  optional string caption = 2;
+  bool spoiler = 3;
+  string url = 4;
+
+  enum Type {
+    AUDIO = 0;
+    VIDEO = 1;
+    FILE = 2;
+    PHOTO = 3;
+    STICKER = 4;
+  }
+}
+
+// INPUT:
+message Request {
+  optional string reply_msg_id = 1;
+  int64 created_at = 2;
+  optional string username = 3;
+  bool silent = 4;
+  oneof body {
+    Text text = 5;
+    Media media = 6;
+  }
+}
+
+// Message:
+message Response {
+  string id = 1;
+  optional string reply_msg_id = 2;
+  int64 created_at = 3;
+  optional string username = 4;
+  string client = 5;
+  bool silent = 6;
+  oneof body {
+    Text text = 7;
+    Media media = 8;
+  }
+}

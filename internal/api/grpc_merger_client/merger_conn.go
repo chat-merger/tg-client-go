@@ -4,13 +4,15 @@ import (
 	"context"
 	"fmt"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/emptypb"
 	"merger-adapter/internal/api/pb"
 	"merger-adapter/internal/debug"
 	"merger-adapter/internal/service/merger"
 )
 
 type mergerConn struct {
-	conn pb.BaseService_ConnectClient
+	updates pb.BaseService_UpdatesClient
+	send    func(req *pb.Request) (*pb.Response, error)
 }
 
 func (s *GrpcMergerClient) Register(xApiKey string) (merger.Conn, error) {
@@ -18,30 +20,36 @@ func (s *GrpcMergerClient) Register(xApiKey string) (merger.Conn, error) {
 		context.Background(),
 		metadata.Pairs(authHeader, xApiKey),
 	)
-	connect, err := s.pbClient.Connect(ctx)
-	debug.Print(connect)
+	updates, err := s.client.Updates(ctx, &emptypb.Empty{})
+	debug.Print(updates)
 	if err != nil {
-		return nil, fmt.Errorf("client connect: %s", err)
+		return nil, fmt.Errorf("client updates: %s", err)
 	}
-	return &mergerConn{conn: connect}, nil
+	return &mergerConn{updates: updates, send: func(req *pb.Request) (*pb.Response, error) {
+		return s.client.SendMessage(ctx, req)
+	}}, nil
 }
 
-func (m *mergerConn) Send(data merger.CreateMessage) error {
+func (m *mergerConn) Send(data merger.CreateMessage) (*merger.Message, error) {
 	req, err := createMessageToRequest(data)
 	if err != nil {
-		return fmt.Errorf("convertation create message to request: %s", err)
+		return nil, fmt.Errorf("convertation create message to request: %s", err)
 	}
-	err = m.conn.Send(req)
+	response, err := m.send(req)
 	if err != nil {
-		return fmt.Errorf("send message to conn: %s", err)
+		return nil, fmt.Errorf("send message to updates: %s", err)
 	}
-	return nil
+	message, err := responseToMessage(response)
+	if err != nil {
+		return nil, fmt.Errorf("convertation response to message: %s", err)
+	}
+	return message, nil
 }
 
 func (m *mergerConn) Update() (*merger.Message, error) {
-	response, err := m.conn.Recv()
+	response, err := m.updates.Recv()
 	if err != nil {
-		return nil, fmt.Errorf("receive from conn: %s", err)
+		return nil, fmt.Errorf("receive from updates: %s", err)
 	}
 	message, err := responseToMessage(response)
 	if err != nil {

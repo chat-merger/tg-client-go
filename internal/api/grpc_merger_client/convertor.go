@@ -30,13 +30,13 @@ func responseToMessage(response *pb.Response) (*merger.Message, error) {
 	}
 
 	return &merger.Message{
-		Id:      merger.ID(response.Id),
-		ReplyId: (*merger.ID)(response.ReplyMsgId),
-		Date:    time.Unix(response.CreatedAt, 0),
-		Author:  response.Author,
-		From:    response.Client,
-		Silent:  response.IsSilent,
-		Body:    body,
+		Id:       merger.ID(response.Id),
+		ReplyId:  (*merger.ID)(response.ReplyMsgId),
+		Date:     time.Unix(response.CreatedAt, 0),
+		Username: response.Username,
+		From:     response.Client,
+		Silent:   response.Silent,
+		Body:     body,
 	}, nil
 }
 
@@ -45,8 +45,8 @@ func createMessageToRequest(msg merger.CreateMessage) (*pb.Request, error) {
 	response := &pb.Request{
 		ReplyMsgId: (*string)(msg.ReplyId),
 		CreatedAt:  msg.Date.Unix(),
-		Author:     msg.Author,
-		IsSilent:   msg.Silent,
+		Username:   msg.Uername,
+		Silent:     msg.Silent,
 		Body:       nil, // WithoutBody!!!!!
 	}
 	// add body

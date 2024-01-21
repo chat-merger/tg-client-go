@@ -17,7 +17,7 @@ const authHeader = "X-Api-Key"
 var _ merger.MergerServer = (*GrpcMergerClient)(nil)
 
 type GrpcMergerClient struct {
-	pbClient pb.BaseServiceClient
+	client pb.BaseServiceClient
 }
 
 func InitGrpcMergerClient(cfg Config) (*GrpcMergerClient, error) {
@@ -28,6 +28,6 @@ func InitGrpcMergerClient(cfg Config) (*GrpcMergerClient, error) {
 	cc.ResetConnectBackoff()
 	client := pb.NewBaseServiceClient(cc)
 	return &GrpcMergerClient{
-		pbClient: client,
+		client: client,
 	}, nil
 }

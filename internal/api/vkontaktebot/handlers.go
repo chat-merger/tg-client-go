@@ -39,7 +39,7 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 	msg := merger.CreateMessage{
 		ReplyId: (*merger.ID)(replyedId),
 		Date:    time.Unix(int64(obj.Message.Date), 0),
-		Author:  author,
+		Uername: author,
 		Silent:  bool(obj.Message.IsSilent),
 		Body: &merger.BodyText{
 			Format: merger.Plain,
@@ -47,7 +47,7 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 		},
 	}
 
-	err := c.conn.Send(msg)
+	_, err := c.conn.Send(msg)
 	if err != nil {
 		log.Fatalf("send message to Server: %s", err)
 	}

@@ -5,6 +5,6 @@ type MergerServer interface {
 }
 
 type Conn interface {
-	Send(data CreateMessage) error
+	Send(data CreateMessage) (*Message, error)
 	Update() (*Message, error)
 }

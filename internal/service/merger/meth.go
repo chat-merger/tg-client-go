@@ -8,8 +8,8 @@ func (m *Message) FormatFull() string {
 		str += fmt.Sprintf("reply to: %s", *m.ReplyId)
 	}
 	str += "\n" + m.Date.Format("15:05 02 Jan")
-	if m.Author != nil {
-		str += "\n" + *m.Author
+	if m.Username != nil {
+		str += "\n" + *m.Username
 	}
 	switch m.Body.(type) {
 	case *BodyText:
@@ -29,8 +29,8 @@ func (m *Message) FormatShort() string {
 	if m.ReplyId != nil {
 		str += fmt.Sprintf("reply to: %s", *m.ReplyId)
 	}
-	if m.Author != nil {
-		str += fmt.Sprintf("\n[%s]: ", *m.Author)
+	if m.Username != nil {
+		str += fmt.Sprintf("\n[%s]: ", *m.Username)
 	} else {
 		str += "\n" + "msg = "
 	}

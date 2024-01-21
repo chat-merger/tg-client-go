@@ -30,7 +30,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 	msg := merger.CreateMessage{
 		ReplyId: (*merger.ID)(replyedId),
 		Date:    time.Unix(ctx.Message.Date, 0),
-		Author:  &author,
+		Uername: &author,
 		Silent:  false, // where prop??
 		Body: &merger.BodyText{
 			Format: merger.Plain,
@@ -38,7 +38,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 		},
 	}
 
-	err := c.conn.Send(msg)
+	_, err := c.conn.Send(msg)
 	if err != nil {
 		return fmt.Errorf("send message to Server: %s", err)
 	}
