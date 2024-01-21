@@ -16,7 +16,7 @@ api_file_name := "mergerapi.proto"
 generated_pb_package_destination := "./internal/api"
 
 # build settings:
-build_output_file_or_directory := "./bin/bot"
+build_output_file := "./bin/tg-client-go"
 
 default: run
 
@@ -31,7 +31,7 @@ run *FLAGS:
     --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f
 
 build *FLAGS:
-    go build -o {{build_output_file_or_directory}} {{FLAGS}}  ./cmd/server/main.go
+    go build -o {{build_output_file}} {{FLAGS}}  ./cmd/bot
 
 # required:
 #   0. go programming language;
