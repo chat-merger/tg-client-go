@@ -1,9 +1,11 @@
 pragma foreign_keys = ON;
 
-create table store
+create table message_map
 (
-    id    integer primary key autoincrement,
-    scope text not null,
-    key   text not null,
-    value text
+    id            integer primary key autoincrement,
+    scope         text not null,
+    merger_id     text not null,
+    controller_id text not null
 );
+
+drop table message_map

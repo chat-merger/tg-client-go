@@ -10,6 +10,8 @@ const (
 	ApplicationStarted              = "Application start is over, waiting when ctx done"
 	TelegramAdapterInitialized      = "TelegramAdapterInitialized"
 	VkontakteAdapterInitialized     = "VkontakteAdapterInitialized"
+	DatabaseInitialized             = "DatabaseInitialized"
+	MessagesMapCreated              = "MessagesMapCreated"
 	InitGrpcMergerClientInitialized = "InitGrpcMergerClientInitialized"
 	ApplicationReceiveCtxDone       = "Application receive ctx.Done signal"
 	ApplicationReceiveInternalError = "ApplicationReceiveInternalError"

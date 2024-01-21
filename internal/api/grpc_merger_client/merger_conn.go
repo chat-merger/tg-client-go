@@ -6,7 +6,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"merger-adapter/internal/api/pb"
-	"merger-adapter/internal/component/debug"
 	"merger-adapter/internal/service/merger"
 )
 
@@ -21,7 +20,6 @@ func (s *GrpcMergerClient) Register(xApiKey string) (merger.Conn, error) {
 		metadata.Pairs(authHeader, xApiKey),
 	)
 	updates, err := s.client.Updates(ctx, &emptypb.Empty{})
-	debug.Print(updates)
 	if err != nil {
 		return nil, fmt.Errorf("client updates: %s", err)
 	}

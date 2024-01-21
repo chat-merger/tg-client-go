@@ -7,16 +7,16 @@ import (
 	"log"
 )
 
-func InitClient(cfg Config) (*Client, error) {
+func InitClient(deps Deps) (*Client, error) {
 	bot, err := gotgbot.NewBot(
-		cfg.Token,
+		deps.Token,
 		nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("building telegram bot: %s", err)
 	}
 
-	conn, err := cfg.Server.Register(cfg.ApiKey)
+	conn, err := deps.Server.Register(deps.ApiKey)
 	if err != nil {
 		return nil, fmt.Errorf("register client: %s", err)
 	}
@@ -33,11 +33,12 @@ func InitClient(cfg Config) (*Client, error) {
 	updater := ext.NewUpdater(disp, nil)
 
 	c := &Client{
-		bot:        bot,
-		dispatcher: disp,
-		updater:    updater,
-		conn:       conn,
-		chatID:     cfg.ChatID,
+		bot:         bot,
+		dispatcher:  disp,
+		updater:     updater,
+		conn:        conn,
+		chatID:      deps.ChatID,
+		messagesMap: deps.MessagesMap,
 	}
 	c.gotgbotSetup()
 
