@@ -15,7 +15,8 @@ ExecStart=/usr/local/bin/tg-client-go \
         --tg-x-api-key=${TG_X_API_KEY} \
         --vk-token=${VK_TOKEN} \
         --vk-peer-id=${VK_PEER_ID} \
-        --vk-x-api-key=${VK_X_API_KEY}
+        --vk-x-api-key=${VK_X_API_KEY} \
+        --db=/var/lib/tg-client-go/database.db
 
 [Install]
 WantedBy=default.target

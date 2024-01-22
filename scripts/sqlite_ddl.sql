@@ -7,5 +7,3 @@ create table message_map
     merger_id     text not null,
     controller_id text not null
 );
-
-drop table message_map
