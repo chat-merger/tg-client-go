@@ -7,7 +7,6 @@ import (
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/events"
 	"log"
-	"math/rand"
 	"merger-adapter/internal/component/debug"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -24,11 +23,17 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 	if obj.Message.PeerID != c.peerID {
 		return
 	}
-	var replyedId *string
+	var replyTo *string
 	if obj.Message.ReplyMessage != nil {
-		id := strconv.Itoa(obj.Message.ReplyMessage.ID)
-		replyedId = &id
+		id, exists, err := c.messagesMap.ByContID(mmScope, toContID(obj.Message.ReplyMessage.ConversationMessageID))
+		if err != nil {
+			log.Printf("[ERROR] msg from message map: %s", err)
+		}
+		if exists {
+			replyTo = (*string)(id)
+		}
 	}
+
 	var author *string
 
 	usrs, _ := c.vk.UsersGet(api.Params{
@@ -39,7 +44,7 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 		author = &fname
 	}
 	msg := merger.CreateMessage{
-		ReplyId: (*merger.ID)(replyedId),
+		ReplyId: (*merger.ID)(replyTo),
 		Date:    time.Unix(int64(obj.Message.Date), 0),
 		Uername: author,
 		Silent:  bool(obj.Message.IsSilent),
@@ -48,12 +53,12 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 			Value:  obj.Message.Text,
 		},
 	}
-
+	debug.Print(msg)
 	mMsg, err := c.conn.Send(msg)
 	if err != nil {
 		log.Fatalf("send message to Server: %s", err)
 	}
-	err = c.messagesMap.Save(mmScope, mMsg.Id, toContID(obj.Message.ID))
+	err = c.messagesMap.Save(mmScope, mMsg.Id, toContID(obj.Message.ConversationMessageID))
 	if err != nil {
 		log.Printf("[ERROR] vkbot onMessage: save msg id to MessageMap: %s", err)
 	}
@@ -79,28 +84,30 @@ func (c *Client) listenServerMessages() error {
 		if err != nil {
 			return fmt.Errorf("receive update: %s", err)
 		}
-		vkMsgId := rand.New(rand.NewSource(time.Now().Unix())).Int()
+		//vkMsgId := rand.New(rand.NewSource(time.Now().Unix())).Int()
 		b := params.NewMessagesSendBuilder()
 		b.Message(msg.FormatShort())
-		b.RandomID(vkMsgId)
-		b.PeerID(c.peerID)
+		b.RandomID(0)
+		b.PeerIDs([]int{c.peerID})
 		// reply
 		if msg.ReplyId != nil {
 			id, exists, err := c.messagesMap.ByMergedID(mmScope, *msg.ReplyId)
 			if err != nil {
 				log.Printf("[ERROR] msg from message map: %s", err)
 			}
+			log.Printf("messagesMap.ByMergedID: id=%v, exists=%v, err=%s", id, exists, err)
 			if exists {
-				b.ReplyTo(toInt(*id))
+				log.Printf("will forward: id=%s", *id)
+				b.Forward(toInt(*id))
 			}
 		}
 
-		_, err = c.vk.MessagesSend(b.Params)
+		vkMsg, err := c.vk.MessagesSendPeerIDs(b.Params)
 		if err != nil {
 			log.Fatal(err)
 		}
-		debug.Print(vkMsgId)
-		err = c.messagesMap.Save(mmScope, msg.Id, toContID(vkMsgId))
+		debug.Print(vkMsg[0])
+		err = c.messagesMap.Save(mmScope, msg.Id, toContID(vkMsg[0].ConversationMessageID))
 		if err != nil {
 			return fmt.Errorf("save msg id to MessageMap: %s", err)
 		}
