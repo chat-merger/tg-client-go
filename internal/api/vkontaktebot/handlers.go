@@ -2,12 +2,12 @@ package vkontaktebot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/api/params"
 	"github.com/SevereCloud/vksdk/v2/events"
 	"log"
-	"merger-adapter/internal/component/debug"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 	"strconv"
@@ -53,7 +53,6 @@ func (c *Client) onMessage(_ context.Context, obj events.MessageNewObject) {
 			Value:  obj.Message.Text,
 		},
 	}
-	debug.Print(msg)
 	mMsg, err := c.conn.Send(msg)
 	if err != nil {
 		log.Fatalf("send message to Server: %s", err)
@@ -97,8 +96,16 @@ func (c *Client) listenServerMessages() error {
 			}
 			log.Printf("messagesMap.ByMergedID: id=%v, exists=%v, err=%s", id, exists, err)
 			if exists {
-				log.Printf("will forward: id=%s", *id)
-				b.Forward(toInt(*id))
+				repPar := map[string]any{
+					"conversation_message_ids": toInt(*id),
+					"peer_id":                  c.peerID,
+					"is_reply":                 true,
+				}
+				jsonString, err := json.Marshal(repPar)
+				if err != nil {
+					log.Printf("[ERROR] marshal params: %s", err)
+				}
+				b.Forward(string(jsonString))
 			}
 		}
 
@@ -106,7 +113,6 @@ func (c *Client) listenServerMessages() error {
 		if err != nil {
 			log.Fatal(err)
 		}
-		debug.Print(vkMsg[0])
 		err = c.messagesMap.Save(mmScope, msg.Id, toContID(vkMsg[0].ConversationMessageID))
 		if err != nil {
 			return fmt.Errorf("save msg id to MessageMap: %s", err)

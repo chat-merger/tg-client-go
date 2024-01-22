@@ -26,9 +26,6 @@ func (m *Message) FormatFull() string {
 
 func (m *Message) FormatShort() string {
 	str := ""
-	if m.ReplyId != nil {
-		str += fmt.Sprintf("reply to: %s", *m.ReplyId)
-	}
 	if m.Username != nil {
 		str += fmt.Sprintf("\n[%s]: ", *m.Username)
 	} else {
