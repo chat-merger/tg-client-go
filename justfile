@@ -9,7 +9,7 @@ protoc_gen_go_version  := "v1.31.0"
 protoc_gen_go_grpc_version  := "v1.3.0"
 
 # Api protobuf scheme:
-api_version_tag := "v0.0.4"
+api_version_tag := "v0.0.4a"
 api_scheme_destination := "./api"
 api_file_name := "mergerapi.proto"
 
@@ -32,7 +32,8 @@ run *FLAGS:
     --vk-token=$VKTOKEN \
     --vk-peer-id=2000000001 \
     --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f \
-    --db={{sqlite_db_source_file}}
+    --db={{sqlite_db_source_file}} \
+    --redis-url=$REDIS_URL
 
 build *FLAGS:
     go build -o {{build_output_file}} {{FLAGS}}  ./cmd/bot

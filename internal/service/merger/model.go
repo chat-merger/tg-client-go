@@ -34,7 +34,7 @@ type Forward struct {
 	Id       *ID
 	Date     time.Time
 	Username *string
-	Text     string
+	Text     *string
 	Media    []Media
 }
 

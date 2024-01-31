@@ -38,7 +38,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 	for _, ps := range ctx.Message.Photo {
 		file, err := c.bot.GetFile(ps.FileId, nil)
 		if err != nil {
-			log.Printf("[ERROR] get file from filestore: %s", err)
+			log.Printf("[ERROR] get file from blobstore: %s", err)
 			continue
 		}
 
@@ -50,7 +50,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 
 		uri, err := c.files.Save(get.Body)
 		if err != nil {
-			log.Printf("[ERROR] uri file to filestore: %s", err)
+			log.Printf("[ERROR] uri file to blobstore: %s", err)
 			continue
 		}
 		err = get.Body.Close()
@@ -61,7 +61,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 		medias = append(medias, merger.Media{
 			Kind:    merger.Photo,
 			Spoiler: false, // ???
-			Url:     uri,
+			Url:     *uri,
 		})
 	}
 

@@ -9,16 +9,23 @@ import (
 	"merger-adapter/internal/api/vkontaktebot"
 	"merger-adapter/internal/common/msgs"
 	"merger-adapter/internal/component/sqlite"
-	"merger-adapter/internal/service/filestore"
+	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/runnable"
+	"time"
 )
 
 func Run(ctx context.Context, cfg *Config) error {
 	app, errCh := newApplication(ctx)
 
-	// filestore
-	files := filestore.NewLocal("files")
+	// blobstore
+	files, err := blobstore.InitRedis(blobstore.Config{
+		FilesLifetime: time.Second * 20,
+		RedisUrl:      cfg.RedisUrl,
+	})
+	if err != nil {
+		return fmt.Errorf("init redis as blobstore: %s", err)
+	}
 
 	// init db:
 	db, err := sqlite.InitSqlite(sqlite.Config{

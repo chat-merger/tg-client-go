@@ -3,7 +3,7 @@ package telegrambot
 import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"merger-adapter/internal/service/filestore"
+	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 )
@@ -15,7 +15,7 @@ type Client struct {
 	conn        merger.Conn
 	chatID      int64
 	messagesMap kvstore.MessagesMap
-	files       filestore.FileStore
+	files       blobstore.TempBlobStore
 }
 
 type Deps struct {
@@ -24,5 +24,5 @@ type Deps struct {
 	ChatID      int64
 	Server      merger.MergerServer
 	MessagesMap kvstore.MessagesMap
-	Files       filestore.FileStore
+	Files       blobstore.TempBlobStore
 }

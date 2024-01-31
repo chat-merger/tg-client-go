@@ -9,7 +9,7 @@ import (
 	"github.com/SevereCloud/vksdk/v2/events"
 	"github.com/SevereCloud/vksdk/v2/object"
 	"log"
-	"merger-adapter/internal/service/filestore"
+	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 	"strconv"
@@ -104,7 +104,7 @@ func (c *Client) listenServerMessages() error {
 		}
 	}
 }
-func addAttachmentsIfExists(b *params.MessagesSendBuilder, vk *api.VK, msg *merger.Message, albumId int, myId int, files filestore.FileStore) {
+func addAttachmentsIfExists(b *params.MessagesSendBuilder, vk *api.VK, msg *merger.Message, albumId int, myId int, files blobstore.TempBlobStore) {
 	attachmentsString := ""
 
 	photos := make([]merger.Media, 0, len(msg.Media))
@@ -159,11 +159,6 @@ func addAttachmentsIfExists(b *params.MessagesSendBuilder, vk *api.VK, msg *merg
 			})
 			if err != nil {
 				log.Printf("[ERROR] photo save: %s", err)
-				continue
-			}
-			err = readCloser.Close()
-			if err != nil {
-				log.Printf("[ERROR] close readCloser: %s", err)
 				continue
 			}
 			savedPhotos = append(savedPhotos, saved...)

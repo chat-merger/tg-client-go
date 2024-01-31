@@ -16,6 +16,7 @@ type Config struct {
 	VkPeer     int
 	VkXApiKey  string
 	DbFile     string
+	RedisUrl   string
 }
 
 // Flag-feature part:
@@ -37,6 +38,7 @@ func InitFlagSet() *FlagSet {
 	cfgFs.fs.IntVar(&cfgFs.cfg.VkPeer, flagVkPeer, 0, "id of vkontakte peer")
 	cfgFs.fs.StringVar(&cfgFs.cfg.VkXApiKey, flagVkXApiKey, "", "api key of chat-merger vkontakte adapter")
 	cfgFs.fs.StringVar(&cfgFs.cfg.DbFile, flagDbFile, "", "path to sqlite database source")
+	cfgFs.fs.StringVar(&cfgFs.cfg.RedisUrl, flagRedisUrl, "", "url for connect to redis")
 	return cfgFs
 }
 
@@ -50,6 +52,7 @@ func (c *FlagSet) cleanLastCfg() {
 	c.cfg.VkPeer = 0
 	c.cfg.VkXApiKey = ""
 	c.cfg.DbFile = ""
+	c.cfg.RedisUrl = ""
 }
 
 // Flag names:
@@ -63,6 +66,7 @@ const (
 	flagVkPeer     = "vk-peer-id"
 	flagVkXApiKey  = "vk-x-api-key"
 	flagDbFile     = "db"
+	flagRedisUrl   = "redis-url"
 )
 
 // Usage printing "how usage flags" message
@@ -99,6 +103,8 @@ func (c *FlagSet) Parse(args []string) (*Config, error) {
 		return nil, missingArgExit(flagVkXApiKey)
 	case newCfg.DbFile == "":
 		return nil, missingArgExit(flagDbFile)
+	case newCfg.RedisUrl == "":
+		return nil, missingArgExit(flagRedisUrl)
 	}
 
 	return &newCfg, nil
