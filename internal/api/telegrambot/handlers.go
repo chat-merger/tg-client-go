@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"log"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -13,28 +12,24 @@ import (
 	"time"
 )
 
-func (c *Client) gotgbotSetup() {
-	c.dispatcher.AddHandler(handlers.NewMessage(c.filter, c.onMessage))
-}
-
-func (c *Client) filter(msg *gotgbot.Message) bool {
-	return msg.Chat.Id == c.chatID && (msg.Text != "" || len(msg.Photo) > 0)
-}
-
-func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
-	var replyTo *string
-	if ctx.Message.ReplyToMessage != nil {
-		id, exists, err := c.messagesMap.ByContID(mmScope, toContID(ctx.Message.ReplyToMessage.MessageId))
+func replyMergerIdFromMsg(msg *gotgbot.Message, mm kvstore.MessagesMap) *string {
+	if msg.ReplyToMessage != nil {
+		id, exists, err := mm.ByContID(mmScope, toContID(msg.ReplyToMessage.MessageId))
 		if err != nil {
 			log.Printf("[ERROR] msg from message map: %s", err)
 		}
 		if exists {
-			replyTo = (*string)(id)
+			return (*string)(id)
 		}
 	}
-	author := ctx.EffectiveUser.Username
+	return nil
+}
 
-	medias := make([]merger.Media, 0, len(ctx.Message.Photo))
+func (c *Client) onTelegramMessage(b *gotgbot.Bot, ctx *ext.Context) error {
+	replyTo := replyMergerIdFromMsg(ctx.Message, c.messagesMap)
+	author := ctx.EffectiveUser.Username
+	ctx.EffectiveMessage.
+		medias := make([]merger.Media, 0, len(ctx.Message.Photo))
 	for _, ps := range ctx.Message.Photo {
 		file, err := c.bot.GetFile(ps.FileId, nil)
 		if err != nil {
@@ -60,7 +55,7 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 		}
 		medias = append(medias, merger.Media{
 			Kind:    merger.Photo,
-			Spoiler: false, // ???
+			Spoiler: ctx.Message.HasMediaSpoiler,
 			Url:     *uri,
 		})
 	}
@@ -106,30 +101,40 @@ func (c *Client) listenServerMessages() error {
 		if err != nil {
 			return fmt.Errorf("receive update: %s", err)
 		}
+		go c.onMergerMessage(msg)
+	}
+}
 
-		// reply
-		var replyTo int64
-		if msg.ReplyId != nil {
-			id, exists, err := c.messagesMap.ByMergedID(mmScope, *msg.ReplyId)
-			if err != nil {
-				log.Printf("[ERROR] msg from message map: %s", err)
-			}
-			if exists {
-				replyTo = toInt64(*id)
-			}
-		}
+func (c *Client) onMergerMessage(msg *merger.Message) {
 
-		tgMsg, err := c.bot.SendMessage(
-			c.chatID,
-			msg.FormatShort(),
-			&gotgbot.SendMessageOpts{ReplyToMessageId: replyTo},
-		)
+	// reply
+	replyTo := replyTgIdFromMsg(msg, c.messagesMap)
+
+	tgMsg, err := c.bot.SendMessage(
+		c.chatID,
+		msg.FormatShort(),
+		&gotgbot.SendMessageOpts{ReplyToMessageId: replyTo},
+	)
+	if err != nil {
+		log.Printf("[ERROR] send message to tg: %s", err)
+		return
+	}
+	err = c.messagesMap.Save(mmScope, msg.Id, toContID(tgMsg.MessageId))
+	if err != nil {
+		log.Printf("[ERROR] msg id to MessageMap: %s", err)
+		return
+	}
+}
+
+func replyTgIdFromMsg(msg *merger.Message, mm kvstore.MessagesMap) int64 {
+	if msg.ReplyId != nil {
+		id, exists, err := mm.ByMergedID(mmScope, *msg.ReplyId)
 		if err != nil {
-			return fmt.Errorf("send message to tg: %s", err)
+			log.Printf("[ERROR] msg from message map: %s", err)
 		}
-		err = c.messagesMap.Save(mmScope, msg.Id, toContID(tgMsg.MessageId))
-		if err != nil {
-			return fmt.Errorf("save msg id to MessageMap: %s", err)
+		if exists {
+			return toInt64(*id)
 		}
 	}
+	return 0
 }
