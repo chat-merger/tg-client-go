@@ -8,6 +8,7 @@ import (
 	"log"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
+	"net/http"
 	"strconv"
 	"time"
 )
@@ -17,7 +18,7 @@ func (c *Client) gotgbotSetup() {
 }
 
 func (c *Client) filter(msg *gotgbot.Message) bool {
-	return msg.Chat.Id == c.chatID && msg.Text != ""
+	return msg.Chat.Id == c.chatID && (msg.Text != "" || len(msg.Photo) > 0)
 }
 
 func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
@@ -33,15 +34,45 @@ func (c *Client) onMessage(b *gotgbot.Bot, ctx *ext.Context) error {
 	}
 	author := ctx.EffectiveUser.Username
 
+	medias := make([]merger.Media, 0, len(ctx.Message.Photo))
+	for _, ps := range ctx.Message.Photo {
+		file, err := c.bot.GetFile(ps.FileId, nil)
+		if err != nil {
+			log.Printf("[ERROR] get file from filestore: %s", err)
+			continue
+		}
+
+		get, err := http.Get(file.URL(b, nil))
+		if err != nil {
+			log.Printf("[ERROR] http get: %s", err)
+			continue
+		}
+
+		uri, err := c.files.Save(get.Body)
+		if err != nil {
+			log.Printf("[ERROR] uri file to filestore: %s", err)
+			continue
+		}
+		err = get.Body.Close()
+		if err != nil {
+			log.Printf("[ERROR] close http body: %s", err)
+			return err
+		}
+		medias = append(medias, merger.Media{
+			Kind:    merger.Photo,
+			Spoiler: false, // ???
+			Url:     uri,
+		})
+	}
+
 	msg := merger.CreateMessage{
-		ReplyId: (*merger.ID)(replyTo),
-		Date:    time.Unix(ctx.Message.Date, 0),
-		Uername: &author,
-		Silent:  false, // where prop??
-		Body: &merger.BodyText{
-			Format: merger.Plain,
-			Value:  ctx.Message.Text,
-		},
+		ReplyId:   (*merger.ID)(replyTo),
+		Date:      time.Unix(ctx.Message.Date, 0),
+		Username:  &author,
+		Silent:    false, // where prop??
+		Text:      &ctx.Message.Text,
+		Media:     medias,
+		Forwarded: nil,
 	}
 
 	mMsg, err := c.conn.Send(msg)

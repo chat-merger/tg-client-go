@@ -2,42 +2,52 @@ package merger
 
 import "time"
 
-type ID string
-
 type Message struct {
-	Id       ID
-	ReplyId  *ID
-	Date     time.Time
-	Username *string
-	From     string // client name
-	Silent   bool
-	Body     Body
+	Id        ID
+	ReplyId   *ID
+	Date      time.Time
+	Username  *string
+	From      string // client name
+	Silent    bool
+	Text      *string
+	Media     []Media
+	Forwarded []Forward
 }
 
-type Body interface{ IsBody() }
-
-type BodyText struct {
-	Format TextFormat
-	Value  string
+type CreateMessage struct {
+	ReplyId   *ID
+	Date      time.Time
+	Username  *string
+	Silent    bool
+	Text      *string
+	Media     []Media
+	Forwarded []Forward
 }
 
-func (b *BodyText) IsBody() {}
-
-type TextFormat string
-
-const (
-	Plain    TextFormat = "Plain"
-	Markdown TextFormat = "Markdown"
-)
-
-type BodyMedia struct {
+type Media struct {
 	Kind    MediaType
-	Caption *string
 	Spoiler bool
 	Url     string
 }
 
-func (b *BodyMedia) IsBody() {}
+type Forward struct {
+	Id       *ID
+	Date     time.Time
+	Username *string
+	Text     string
+	Media    []Media
+}
+
+type ApiKey string
+type ID string
+
+type ConnStatus uint8
+
+const (
+	ConnStatusUndefined ConnStatus = iota
+	ConnStatusInactive
+	ConnStatusActive
+)
 
 type MediaType string
 
@@ -48,13 +58,3 @@ const (
 	Photo   MediaType = "Photo"
 	Sticker MediaType = "Sticker"
 )
-
-// create message
-
-type CreateMessage struct {
-	ReplyId *ID
-	Date    time.Time
-	Uername *string
-	Silent  bool
-	Body    Body
-}

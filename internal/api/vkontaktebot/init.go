@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/SevereCloud/vksdk/v2/api"
 	"github.com/SevereCloud/vksdk/v2/longpoll-bot"
+	"merger-adapter/internal/component/debug"
 )
 
 func InitClient(deps Deps) (*Client, error) {
@@ -30,7 +31,10 @@ func InitClient(deps Deps) (*Client, error) {
 		conn:        conn,
 		peerID:      deps.PeerId,
 		messagesMap: deps.MessagesMap,
+		my:          group[0],
+		files:       deps.Files,
 	}
+	debug.Print(c.my)
 
 	c.gotgbotSetup()
 

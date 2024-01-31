@@ -9,23 +9,12 @@ option java_outer_classname = "MergerApi";
 
 
 service BaseService {
-  rpc Updates(google.protobuf.Empty) returns (stream Response);
-  rpc SendMessage(Request) returns (Response);
+  rpc Updates(google.protobuf.Empty) returns (stream Message);
+  rpc SendMessage(NewMessageBody) returns (Message);
 }
 
-
-message Text {
-  Format format = 1;
-  string value = 2;
-
-  enum Format {
-    PLAIN = 0;
-    MARKDOWN = 1;
-  }
-}
 message Media {
   Type type = 1;
-  optional string caption = 2;
   bool spoiler = 3;
   string url = 4;
 
@@ -38,28 +27,33 @@ message Media {
   }
 }
 
-// INPUT:
-message Request {
-  optional string reply_msg_id = 1;
+message NewMessageBody {
   int64 created_at = 2;
-  optional string username = 3;
   bool silent = 4;
-  oneof body {
-    Text text = 5;
-    Media media = 6;
-  }
+  optional string reply_msg_id = 1;
+  optional string username = 3;
+  optional string text = 5;
+  repeated Media media = 6;
+  repeated Forwarded forwarded = 7;
 }
 
-// Message:
-message Response {
+message Message {
   string id = 1;
+  string client = 5;
+  int64 created_at = 3;
+  bool silent = 6;
   optional string reply_msg_id = 2;
+  optional string username = 4;
+  optional string text = 7;
+  repeated Media media = 8;
+  repeated Forwarded forwarded = 9;
+}
+
+
+message Forwarded {
+  optional string id = 1;
   int64 created_at = 3;
   optional string username = 4;
-  string client = 5;
-  bool silent = 6;
-  oneof body {
-    Text text = 7;
-    Media media = 8;
-  }
+  string text = 7;
+  repeated  Media media = 8;
 }

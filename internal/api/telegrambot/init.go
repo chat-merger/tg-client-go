@@ -39,6 +39,7 @@ func InitClient(deps Deps) (*Client, error) {
 		conn:        conn,
 		chatID:      deps.ChatID,
 		messagesMap: deps.MessagesMap,
+		files:       deps.Files,
 	}
 	c.gotgbotSetup()
 

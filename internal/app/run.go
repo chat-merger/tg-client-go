@@ -9,12 +9,16 @@ import (
 	"merger-adapter/internal/api/vkontaktebot"
 	"merger-adapter/internal/common/msgs"
 	"merger-adapter/internal/component/sqlite"
+	"merger-adapter/internal/service/filestore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/runnable"
 )
 
 func Run(ctx context.Context, cfg *Config) error {
 	app, errCh := newApplication(ctx)
+
+	// filestore
+	files := filestore.NewLocal("files")
 
 	// init db:
 	db, err := sqlite.InitSqlite(sqlite.Config{
@@ -38,10 +42,11 @@ func Run(ctx context.Context, cfg *Config) error {
 
 	tgbClient, err := telegrambot.InitClient(telegrambot.Deps{
 		Token:       cfg.TgBotToken,
+		ApiKey:      cfg.TgXApiKey,
 		ChatID:      cfg.TgChat,
 		Server:      server,
-		ApiKey:      cfg.TgXApiKey,
 		MessagesMap: messagesMap,
+		Files:       files,
 	})
 	if err != nil {
 		return fmt.Errorf("tg client initialization: %s", err)
@@ -51,10 +56,11 @@ func Run(ctx context.Context, cfg *Config) error {
 
 	vkbClient, err := vkontaktebot.InitClient(vkontaktebot.Deps{
 		Token:       cfg.VkBotToken,
+		ApiKey:      cfg.VkXApiKey,
 		PeerId:      cfg.VkPeer,
 		Server:      server,
-		ApiKey:      cfg.VkXApiKey,
 		MessagesMap: messagesMap,
+		Files:       files,
 	})
 	if err != nil {
 		return fmt.Errorf("vk client initialization: %s", err)

@@ -9,7 +9,7 @@ protoc_gen_go_version  := "v1.31.0"
 protoc_gen_go_grpc_version  := "v1.3.0"
 
 # Api protobuf scheme:
-api_version_tag := "v0.0.2"
+api_version_tag := "v0.0.4"
 api_scheme_destination := "./api"
 api_file_name := "mergerapi.proto"
 
@@ -27,10 +27,10 @@ run *FLAGS:
     go run  {{FLAGS}} ./cmd/bot \
     --host='localhost:32256' \
     --tg-token=$TGTOKEN \
-    --tg-chat-id=-4052858574 \
+    --tg-chat-id=-4174819149 \
     --tg-x-api-key=e9a8a738-fc38-4b4c-be05-9b9267372b94 \
     --vk-token=$VKTOKEN \
-    --vk-peer-id=2000000002 \
+    --vk-peer-id=2000000001 \
     --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f \
     --db={{sqlite_db_source_file}}
 
