@@ -11,11 +11,11 @@ func (c *Client) Run(ctx context.Context) error {
 	// Start receiving updates.
 	// get information about the group
 
-	// Run Bots Long Poll
+	// ReadNext Bots Long Poll
 	go func() {
 		log.Println("Start Long Poll")
 		if err := c.lp.Run(); err != nil {
-			log.Fatalf("lp.Run: %s", err)
+			log.Fatalf("lp.ReadNext: %s", err)
 		}
 	}()
 

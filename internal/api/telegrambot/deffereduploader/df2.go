@@ -1,6 +1,7 @@
-package telegrambot
+package deffereduploader
 
 import (
+	"context"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -8,49 +9,63 @@ import (
 	"time"
 )
 
-type DeferredUploader interface {
-	Upload(msg gotgbot.Message, ds DeferringStrategy) error
-}
+var _ DeferredUploader = (*DeferredUploader2)(nil)
 
-type DeferringStrategy uint8
-
-const (
-	Unknown DeferringStrategy = iota
-	GroupMedia
-	Media
-	Texted
-	Forward
-)
-
-type DeferredUploaderImpl struct {
-	checkPeriod    time.Duration
+type DeferredUploader2 struct {
 	releaseTimeout time.Duration
-	userBuckets    UserBuckets
 	mu             *sync.Mutex
-
-	mm kvstore.MessagesMap
+	mm             kvstore.MessagesMap
 }
 
-// type StrategyBuckets map[DeferringStrategy]StrategyBucket
-
-type UserBuckets map[int64]UserBucket
-
-type StrategyBucket struct {
-	msg       *merger.Message
-	releaseIn time.Time
+type Runner struct {
+	//current *merger.Message
+	//prev    Kind
+	prev MsgWithKind
+	// todo + shared mutex
+	queue chan MsgWithKind
+	com   Comparator
 }
 
-type UserBucket struct {
-	lastStrategy DeferringStrategy
-	releaseIn    time.Time
+func (r *Runner) ReadNext(ctx context.Context) {
+	var mwk MsgWithKind
+	select {
+	case mwk = <-r.queue:
+	case <-ctx.Done():
+		return
+	}
 
-	groupMedia *merger.Message
-	media      *merger.Message
-	texted     *merger.Message
-	forward    *merger.Message
+	r.prev = r.com.CompareAndMbSendAndReturnCurrent(r.prev, mwk)
 }
 
-func (d *DeferredUploaderImpl) Upload(msg gotgbot.Message) error {
+func (r *Runner) Put() chan<- MsgWithKind {
+	return r.queue
+}
+
+type MsgWithKind struct {
+	kind Kind
+	msg  merger.Message
+}
+
+// type StrategyBuckets map[Kind]StrategyBucket
+
+//type UserBuckets map[int64]UserBucket
+//
+//type StrategyBucket struct {
+//	msg       *merger.Message
+//	releaseIn time.Time
+//}
+//
+//type UserBucket struct {
+//	lastStrategy Kind
+//	releaseIn    time.Time
+//
+//	groupMedia *merger.Message
+//	media      *merger.Message
+//	texted     *merger.Message
+//	forward    *merger.Message
+//}
+
+func (d *DeferredUploader2) Upload(msg gotgbot.Message) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -60,7 +75,7 @@ func (d *DeferredUploaderImpl) Upload(msg gotgbot.Message) error {
 
 	return nil
 }
-func (d *DeferredUploaderImpl) sendToHandler(msg gotgbot.Message, ds DeferringStrategy) error {
+func (d *DeferredUploader2) sendToHandler(msg gotgbot.Message, ds Kind) error {
 	ubkt := d.userBuckets[msg.GetSender().Id()]
 	var newMsg *merger.Message
 	var err error
@@ -79,13 +94,13 @@ func (d *DeferredUploaderImpl) sendToHandler(msg gotgbot.Message, ds DeferringSt
 	return nil
 }
 
-func (d *DeferredUploaderImpl) handleGroupMedia(msg gotgbot.Message, prev *merger.Message) (*merger.Message, error) {
+func (d *DeferredUploader2) handleGroupMedia(msg gotgbot.Message, prev *merger.Message) (*merger.Message, error) {
 	if prev == nil {
 		return d.msgToMerger(msg)
 	}
 }
 
-func defineStrategy(msg gotgbot.Message) DeferringStrategy {
+func defineStrategy(msg gotgbot.Message) Kind {
 	switch {
 	case msg.ForwardDate != 0:
 		return Forward
