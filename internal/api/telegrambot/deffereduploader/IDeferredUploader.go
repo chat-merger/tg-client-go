@@ -1,8 +1,10 @@
 package deffereduploader
 
 import (
+	"context"
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
+	"merger-adapter/internal/api/telegrambot/tghelper"
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -40,22 +42,30 @@ type DeferredUploader struct {
 	mm             kvstore.MessagesMap
 	con            IConvertor
 	queue          *Queue
+	usersQueue     map[int64]*Queue
+	runner         IRunner
+	comp           IComparator
+	sender         ISender
 }
 
-func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, bot *gotgbot.Bot) *DeferredUploader {
+func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, bot *gotgbot.Bot, conn merger.Conn) *DeferredUploader {
+	s := NewSender(conn, mm)
 	return &DeferredUploader{
-		releaseTimeout: time.Millisecond * 100,
+		releaseTimeout: time.Millisecond * 600,
 		mu:             new(sync.Mutex),
 		mm:             mm,
 		con:            NewConvertor(mm, files, bot),
-		queue:          NewQueue(make(chan MsgWithKind, 500)),
+		queue:          InitQueue(make(chan MsgWithKind, 500)),
+		usersQueue:     make(map[int64]*Queue),
+		runner:         new(Runner),
+		comp:           NewComparatorImpl(s),
+		sender:         s,
 	}
 }
 
 func (d *DeferredUploader) Upload(original gotgbot.Message) error {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-
 	msg, err := d.con.Convert(original)
 	if err != nil {
 		return fmt.Errorf("convert original gotgbot msg to merger: %s", err)
@@ -65,45 +75,27 @@ func (d *DeferredUploader) Upload(original gotgbot.Message) error {
 		original: original,
 		msg:      msg,
 	}
-	d.queue.Ch() <- mwk
+	q, ok := d.usersQueue[original.GetSender().Id()]
+	if !ok {
+		q = InitQueue(make(chan MsgWithKind, 50))
+		d.usersQueue[original.GetSender().Id()] = q
+		go d.runner.Run(context.Background(), q, d.comp, d.sender, d.releaseTimeout)
+	}
+	q.Ch() <- mwk
 	return nil
 }
 
 func defineKind(msg gotgbot.Message) Kind {
 	switch {
-	case msg.ForwardDate != 0:
+	case tghelper.IsForward(msg):
 		return Forward
-	case msg.MediaGroupId != "":
+	case tghelper.IsPartOfMediaGroup(msg):
 		return GroupMedia
-	case isMedia(msg):
+	case tghelper.IsMedia(msg):
 		return Media
-	case msg.Text != "":
+	case tghelper.HasText(msg):
 		return Texted
 	default:
 		return Unknown
 	}
-}
-
-func isMedia(msg gotgbot.Message) bool {
-	return isPhoto(msg) || isVideo(msg) || isAudio(msg) || isDocument(msg) || isSticker(msg)
-}
-
-func isPhoto(msg gotgbot.Message) bool {
-	return len(msg.Photo) > 0
-}
-
-func isVideo(msg gotgbot.Message) bool {
-	return msg.Video != nil
-}
-
-func isAudio(msg gotgbot.Message) bool {
-	return msg.Audio != nil
-}
-
-func isDocument(msg gotgbot.Message) bool {
-	return msg.Document != nil
-}
-
-func isSticker(msg gotgbot.Message) bool {
-	return msg.Sticker != nil
 }
