@@ -17,7 +17,7 @@ const (
 	ApplicationReceiveInternalError = "ApplicationReceiveInternalError"
 
 	//  Runnable
-	RunRunnable     = "ReadNext Runnable"
+	RunRunnable     = "Run Runnable"
 	StoppedRunnable = "Stopped Runnable"
 
 	// db

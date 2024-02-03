@@ -6,6 +6,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"log"
+	"merger-adapter/internal/api/telegrambot/deffereduploader"
 )
 
 func InitClient(deps Deps) (*Client, error) {
@@ -35,14 +36,17 @@ func InitClient(deps Deps) (*Client, error) {
 
 	c := &Client{
 		bot:         bot,
-		dispatcher:  disp,
 		updater:     updater,
 		conn:        conn,
 		chatID:      deps.ChatID,
 		messagesMap: deps.MessagesMap,
-		files:       deps.Files,
+		du: deffereduploader.NewDeferredUploader(
+			deps.MessagesMap,
+			deps.Files,
+			bot,
+		),
 	}
-	c.dispatcher.AddHandler(handlers.NewMessage(c.filter, c.onTelegramMessage))
+	disp.AddHandler(handlers.NewMessage(c.filter, c.onTelegramMessage))
 
 	return c, err
 }

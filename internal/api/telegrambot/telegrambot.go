@@ -3,6 +3,7 @@ package telegrambot
 import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
+	"merger-adapter/internal/api/telegrambot/deffereduploader"
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -10,12 +11,11 @@ import (
 
 type Client struct {
 	bot         *gotgbot.Bot
-	dispatcher  *ext.Dispatcher
 	updater     *ext.Updater
 	conn        merger.Conn
 	chatID      int64
 	messagesMap kvstore.MessagesMap
-	files       blobstore.TempBlobStore
+	du          deffereduploader.IDeferredUploader
 }
 
 type Deps struct {
