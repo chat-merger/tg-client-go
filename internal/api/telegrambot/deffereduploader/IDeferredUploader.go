@@ -58,14 +58,13 @@ func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, 
 		queue:          InitQueue(make(chan MsgWithKind, 500)),
 		usersQueue:     make(map[int64]*Queue),
 		runner:         new(Runner),
-		comp:           NewComparatorImpl(s),
+		comp:           NewComparatorImpl(),
 		sender:         s,
 	}
 }
 
 func (d *DeferredUploader) Upload(original gotgbot.Message) error {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+
 	msg, err := d.con.Convert(original)
 	if err != nil {
 		return fmt.Errorf("convert original gotgbot msg to merger: %s", err)
@@ -75,6 +74,8 @@ func (d *DeferredUploader) Upload(original gotgbot.Message) error {
 		original: original,
 		msg:      msg,
 	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
 	q, ok := d.usersQueue[original.GetSender().Id()]
 	if !ok {
 		q = InitQueue(make(chan MsgWithKind, 50))

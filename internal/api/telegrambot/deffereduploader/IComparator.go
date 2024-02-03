@@ -13,12 +13,10 @@ const (
 	Merged
 )
 
-type Comparator struct {
-	sender ISender
-}
+type Comparator struct{}
 
-func NewComparatorImpl(sender ISender) *Comparator {
-	return &Comparator{sender: sender}
+func NewComparatorImpl() *Comparator {
+	return &Comparator{}
 }
 
 func (c *Comparator) Compare(prev *MsgWithKind, next MsgWithKind) (current MsgWithKind, result CompareResult) {
