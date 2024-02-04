@@ -17,15 +17,8 @@ type IRunner interface {
 	)
 }
 
-//type MsgWithStrat struct {
-//	original gotgbot.Message
-//	strat    CompareResultStrat
-//}
-
 type Runner struct {
 	prev *MsgWithKind
-	//// Deprecated. use prev
-	//prevf *MsgWithStrat
 }
 
 func (r *Runner) Run(
@@ -60,7 +53,7 @@ func (r *Runner) Run(
 			}
 			nextMsg, err := conv.Convert(orig)
 			if err != nil {
-				log.Printf("conv.Convert: %s", err)
+				log.Printf("[ERROR] conv.Convert: %s", err)
 				continue
 			}
 			next := &MsgWithKind{
@@ -69,15 +62,20 @@ func (r *Runner) Run(
 				msg:      nextMsg,
 			}
 			compRes := Compare(r.prev, *next)
-			// предыдущее было заменено, а не склеено
+
 			switch compRes {
-			case PutNext:
+			case PutNext: // предыдущее было заменено, а не склеено
 				if r.prev != nil {
 					sendAndCleanPrev(*r.prev)
 				}
 				r.prev = next // put next to prev
+
 			case PutMerged:
 				r.prev.msg = merge(r.prev.msg, next.msg)
+				r.prev.kind = next.kind
+				// but expect:
+				// `r.prev.original = next.original`
+				// then first receive relation merger id
 			}
 			// Если последующее сообщение не поступит до окончания таймера,
 			// то r.prev будет отправлено.
@@ -90,6 +88,7 @@ func (r *Runner) Run(
 				continue
 			}
 			if r.prev != nil {
+				log.Printf("[<-timer.C] %#v", r.prev.msg)
 				sendAndCleanPrev(*r.prev)
 			}
 

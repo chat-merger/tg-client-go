@@ -22,11 +22,12 @@ func Compare(prevMsg *MsgWithKind, nextMsg MsgWithKind) (result CompareResult) {
 	n := nextMsg.kind
 	switch p {
 	case GroupMedia:
-		if n == GroupMedia { // even when tgMsg.media_group_id not equals, todo: fix
+		if n == GroupMedia && tghelper.HasSameMediaGroup(prevMsg.original, nextMsg.original) {
 			return PutMerged
 		}
 	case Texted:
 		if n == GroupMedia || n == Forward {
+			log.Println("[Compare] case Texted > PutMerged")
 			return PutMerged
 		}
 	case Forward:

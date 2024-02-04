@@ -7,9 +7,14 @@ import (
 
 const KvStoreScope = kvstore.Scope("TgBotScope")
 
+func HasSameMediaGroup(a, b gotgbot.Message) bool {
+	return a.MediaGroupId == b.MediaGroupId
+}
+
 func IsForward(msg gotgbot.Message) bool {
 	return msg.ForwardDate != 0
 }
+
 func IsMedia(msg gotgbot.Message) bool {
 	return IsPhoto(msg) || IsVideo(msg) || IsAudio(msg) || IsDocument(msg) || IsSticker(msg)
 }

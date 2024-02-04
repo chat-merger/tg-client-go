@@ -10,7 +10,7 @@ type Queue struct {
 	ch chan gotgbot.Message
 }
 
-func InitQueue(ch chan gotgbot.Message) *Queue {
+func NewQueue(ch chan gotgbot.Message) *Queue {
 	return &Queue{
 		ch: ch,
 	}
