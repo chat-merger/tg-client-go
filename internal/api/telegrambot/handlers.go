@@ -9,9 +9,14 @@ import (
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 	"strconv"
+	"time"
 )
 
+var lastReq = time.Now()
+
 func (c *Client) onTelegramCreatedMessage(b *gotgbot.Bot, ctx *ext.Context) error {
+	log.Printf("onTelegramCreatedMessage: after last %d ms ", time.Now().UnixMilli()-lastReq.UnixMilli())
+	lastReq = time.Now()
 	err := c.du.Upload(*ctx.Message)
 	if err != nil {
 		return fmt.Errorf("upload msg to IDeferredUploader: %s", err)

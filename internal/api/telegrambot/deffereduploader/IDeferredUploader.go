@@ -35,25 +35,23 @@ type MsgWithKind struct {
 var _ IDeferredUploader = (*DeferredUploader)(nil)
 
 type DeferredUploader struct {
-	releaseTimeout time.Duration
-	mu             *sync.RWMutex
-	mm             kvstore.MessagesMap
-	con            IConvertor
-	usersQueue     map[int64]*Queue
-	runner         IRunner
-	sender         ISender
+	mu         *sync.RWMutex
+	mm         kvstore.MessagesMap
+	con        IConvertor
+	usersQueue map[int64]*Queue
+	runner     IRunner
+	sender     ISender
 }
 
 func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, bot *gotgbot.Bot, conn merger.Conn) *DeferredUploader {
 	s := NewSender(conn, mm)
 	return &DeferredUploader{
-		releaseTimeout: time.Millisecond * 70,
-		mu:             new(sync.RWMutex),
-		mm:             mm,
-		con:            NewConvertor(mm, files, bot),
-		usersQueue:     make(map[int64]*Queue),
-		runner:         new(Runner),
-		sender:         s,
+		mu:         new(sync.RWMutex),
+		mm:         mm,
+		con:        NewConvertor(mm, files, bot),
+		usersQueue: make(map[int64]*Queue),
+		runner:     new(Runner),
+		sender:     s,
 	}
 }
 
@@ -68,7 +66,21 @@ func (d *DeferredUploader) Upload(original gotgbot.Message) error {
 		d.usersQueue[original.GetSender().Id()] = q
 		d.mu.Unlock()
 		d.mu.RLock()
-		go d.runner.Run(context.Background(), q, d.sender, d.con, d.releaseTimeout)
+		go d.runner.Run(
+			context.Background(),
+			q,
+			d.sender,
+			d.con,
+			func(msg *MsgWithKind) time.Duration {
+				// форварды приходят с большой задержкой,
+				// поэтому текст надо долго держать и ждать возможных форвардов
+				if msg.kind == Texted {
+					return 400 * time.Millisecond
+				} else {
+					return 70 * time.Millisecond
+				}
+			},
+		)
 	}
 	q.Ch() <- original
 	return nil

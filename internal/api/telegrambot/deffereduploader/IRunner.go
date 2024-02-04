@@ -13,7 +13,7 @@ type IRunner interface {
 		queue IQueue,
 		sender ISender,
 		conv IConvertor,
-		releasePeriod time.Duration,
+		releasePeriodFun func(*MsgWithKind) time.Duration,
 	)
 }
 
@@ -26,14 +26,14 @@ func (r *Runner) Run(
 	queue IQueue,
 	sender ISender,
 	conv IConvertor,
-	releasePeriod time.Duration,
+	releasePeriodFun func(*MsgWithKind) time.Duration,
 ) {
 	// Возобновляемый таймер.
 	// Здесь используется чтобы отпралять последнее сохраненное сообщение (r.prev)
 	// если после Compare оно не было отправлено (т.е. сообщения были склеены).
-	timer := time.NewTimer(releasePeriod)
-	timer.Stop()
-	defer timer.Stop()
+	timer := time.NewTimer(0)
+	stopTimer(timer)
+	defer stopTimer(timer)
 
 	sendAndCleanPrev := func(msg MsgWithKind) {
 		err := sender.Send(msg)
@@ -79,16 +79,11 @@ func (r *Runner) Run(
 			}
 			// Если последующее сообщение не поступит до окончания таймера,
 			// то r.prev будет отправлено.
-			timer.Reset(releasePeriod)
+			stopTimer(timer).Reset(releasePeriodFun(r.prev))
 
-		case _, ok := <-timer.C:
-			if !ok {
-				// Недостижимый код. Вроде.
-				log.Printf("[ERROR] chan of Runner timer is closed or empty")
-				continue
-			}
+		case <-timer.C:
 			if r.prev != nil {
-				log.Printf("[<-timer.C] %#v", r.prev.msg)
+				log.Printf("[<-timer.C] send %v", r.prev.kind)
 				sendAndCleanPrev(*r.prev)
 			}
 
@@ -98,7 +93,20 @@ func (r *Runner) Run(
 	}
 }
 
+func stopTimer(timer *time.Timer) *time.Timer {
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+	return timer
+}
+
 func merge(a, b merger.CreateMessage) merger.CreateMessage {
+	if (a.Text == nil || *a.Text == "") && (b.Text != nil && *b.Text != "") {
+		a.Text = b.Text
+	}
 	a.Forwarded = append(a.Forwarded, b.Forwarded...)
 	a.Media = append(a.Media, b.Media...)
 	return a
