@@ -6,11 +6,9 @@ import (
 	"log"
 	grpcside "merger-adapter/internal/api/grpc_merger_client"
 	"merger-adapter/internal/api/telegrambot"
-	"merger-adapter/internal/common/msgs"
 	"merger-adapter/internal/component/sqlite"
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
-	"merger-adapter/internal/service/runnable"
 	"time"
 )
 
@@ -33,10 +31,10 @@ func Run(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("init databse: %s", err)
 	}
-	log.Println(msgs.DatabaseInitialized)
+	log.Println("DatabaseInitialized")
 
 	messagesMap := kvstore.NewSqliteMessagesMap(db)
-	log.Println(msgs.MessagesMapCreated)
+	log.Println("MessagesMapCreated")
 
 	server, err := grpcside.InitGrpcMergerClient(grpcside.Config{
 		Host: cfg.ServerHost,
@@ -44,7 +42,7 @@ func Run(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("init grpc merger server: %s", err)
 	}
-	log.Println(msgs.InitGrpcMergerClientInitialized)
+	log.Println("InitGrpcMergerClientInitialized")
 
 	tgbClient, err := telegrambot.InitClient(telegrambot.Deps{
 		Token:       cfg.TgBotToken,
@@ -57,10 +55,10 @@ func Run(ctx context.Context, cfg *Config) error {
 	if err != nil {
 		return fmt.Errorf("tg client initialization: %s", err)
 	}
-	log.Println(msgs.TelegramAdapterInitialized)
-	go app.run(tgbClient, "vkontakte adapter")
+	log.Println("TelegramAdapterInitialized")
+	go app.run(tgbClient, "telegram adapter")
 
-	log.Println(msgs.ApplicationStarted)
+	log.Println("Application start is over, waiting when ctx done")
 
 	return app.gracefulShutdownApplication(errCh)
 }
@@ -69,24 +67,24 @@ func (a *application) gracefulShutdownApplication(errCh <-chan error) error {
 	var err error
 	select {
 	case <-a.ctx.Done():
-		log.Println(msgs.ApplicationReceiveCtxDone)
+		log.Println("Application receive ctx.Done signal")
 	case err = <-errCh:
 		a.cancelFunc()
-		log.Println(msgs.ApplicationReceiveInternalError)
+		log.Println("ApplicationReceiveInternalError")
 	}
 	a.wg.Wait()
 	return err
 }
 
-func (a *application) run(r runnable.Runnable, name string) {
+func (a *application) run(r Runnable, name string) {
 	a.wg.Add(1)
 	defer a.wg.Done()
-	log.Println(msgs.RunRunnable, name)
+	log.Println("Run Runnable", name)
 	err := r.Run(a.ctx)
 	if err != nil {
 		a.errorf("%s run: %s", name, err)
 	}
-	log.Println(msgs.StoppedRunnable, name)
+	log.Println("Stopped Runnable", name)
 }
 
 func (a *application) errorf(format string, args ...any) {
@@ -94,4 +92,8 @@ func (a *application) errorf(format string, args ...any) {
 	case a.errCh <- fmt.Errorf(format, args...):
 	default:
 	}
+}
+
+type Runnable interface {
+	Run(ctx context.Context) error
 }

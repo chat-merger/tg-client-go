@@ -5,7 +5,6 @@ import (
 	"errors"
 	"log"
 	"merger-adapter/internal/app"
-	"merger-adapter/internal/common/msgs"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,10 +12,10 @@ import (
 )
 
 func main() {
-	log.Println(msgs.ServerStarting)
+	log.Println("Server Starting")
 	log.SetFlags(log.Lshortfile | log.Ltime | log.Ldate)
 	cfg := initConfig()
-	log.Println(msgs.ConfigInitialized)
+	log.Println("Config Initialized")
 	ctx, cancel := context.WithCancel(context.Background())
 	go runApplication(ctx, cfg)
 
@@ -24,7 +23,7 @@ func main() {
 }
 
 func runApplication(ctx context.Context, cfg *app.Config) {
-	log.Println(msgs.ApplicationStart)
+	log.Println("Start Application")
 	err := app.Run(ctx, cfg)
 	if err != nil {
 		log.Fatalf("application: %s", err)
