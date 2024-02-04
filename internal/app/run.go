@@ -7,8 +7,8 @@ import (
 	grpcside "merger-adapter/internal/api/grpc_merger_client"
 	"merger-adapter/internal/api/telegrambot"
 	"merger-adapter/internal/component/sqlite"
+	"merger-adapter/internal/repository/messages_repository"
 	"merger-adapter/internal/service/blobstore"
-	"merger-adapter/internal/service/kvstore"
 	"time"
 )
 
@@ -33,8 +33,8 @@ func Run(ctx context.Context, cfg *Config) error {
 	}
 	log.Println("DatabaseInitialized")
 
-	messagesMap := kvstore.NewSqliteMessagesMap(db)
-	log.Println("MessagesMapCreated")
+	repo := messages_repository.NewMessagesRepositorySqlite(db)
+	log.Println("messages repository created")
 
 	server, err := grpcside.InitGrpcMergerClient(grpcside.Config{
 		Host: cfg.ServerHost,
@@ -45,12 +45,12 @@ func Run(ctx context.Context, cfg *Config) error {
 	log.Println("InitGrpcMergerClientInitialized")
 
 	tgbClient, err := telegrambot.InitClient(telegrambot.Deps{
-		Token:       cfg.TgBotToken,
-		ApiKey:      cfg.TgXApiKey,
-		ChatID:      cfg.TgChat,
-		Server:      server,
-		MessagesMap: messagesMap,
-		Files:       files,
+		Token:  cfg.TgBotToken,
+		ApiKey: cfg.TgXApiKey,
+		ChatID: cfg.TgChat,
+		Server: server,
+		Files:  files,
+		Repo:   repo,
 	})
 	if err != nil {
 		return fmt.Errorf("tg client initialization: %s", err)

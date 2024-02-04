@@ -40,7 +40,7 @@ func Compare(prevMsg *MsgWithKind, nextMsg MsgWithKind) (result CompareResult) {
 	return PutNext
 }
 
-func defineKind(msg gotgbot.Message) Kind {
+func DefineKind(msg gotgbot.Message) Kind {
 	switch {
 	case tghelper.IsForward(msg):
 		return Forward

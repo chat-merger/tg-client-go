@@ -35,13 +35,13 @@ func InitClient(deps Deps) (*Client, error) {
 	updater := ext.NewUpdater(disp, nil)
 
 	c := &Client{
-		bot:         bot,
-		updater:     updater,
-		conn:        conn,
-		chatID:      deps.ChatID,
-		messagesMap: deps.MessagesMap,
+		bot:     bot,
+		updater: updater,
+		conn:    conn,
+		chatID:  deps.ChatID,
+		repo:    deps.Repo,
 		du: deffereduploader.NewDeferredUploader(
-			deps.MessagesMap,
+			deps.Repo,
 			deps.Files,
 			bot,
 			conn,

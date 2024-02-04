@@ -57,7 +57,7 @@ func (r *Runner) Run(
 				continue
 			}
 			next := &MsgWithKind{
-				kind:     defineKind(orig),
+				kind:     DefineKind(orig),
 				original: orig,
 				msg:      nextMsg,
 			}

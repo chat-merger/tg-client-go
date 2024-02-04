@@ -38,16 +38,7 @@ type Forward struct {
 	Media    []Media
 }
 
-type ApiKey string
 type ID string
-
-type ConnStatus uint8
-
-const (
-	ConnStatusUndefined ConnStatus = iota
-	ConnStatusInactive
-	ConnStatusActive
-)
 
 type MediaType string
 

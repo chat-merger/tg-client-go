@@ -2,10 +2,7 @@ package tghelper
 
 import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
-	"merger-adapter/internal/service/kvstore"
 )
-
-const KvStoreScope = kvstore.Scope("TgBotScope")
 
 func HasSameMediaGroup(a, b gotgbot.Message) bool {
 	return a.MediaGroupId == b.MediaGroupId

@@ -5,11 +5,10 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"log"
 	"merger-adapter/internal/api/telegrambot/tghelper"
+	mrepo "merger-adapter/internal/repository/messages_repository"
 	"merger-adapter/internal/service/blobstore"
-	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 	"net/http"
-	"strconv"
 	"time"
 )
 
@@ -17,13 +16,13 @@ type IConvertor interface {
 	Convert(msg gotgbot.Message) (merger.CreateMessage, error)
 }
 type Convertor struct {
-	mm    kvstore.MessagesMap
+	repo  mrepo.MessagesRepository
 	files blobstore.TempBlobStore
 	bot   *gotgbot.Bot
 }
 
-func NewConvertor(mm kvstore.MessagesMap, files blobstore.TempBlobStore, bot *gotgbot.Bot) *Convertor {
-	return &Convertor{mm: mm, files: files, bot: bot}
+func NewConvertor(repo mrepo.MessagesRepository, files blobstore.TempBlobStore, bot *gotgbot.Bot) *Convertor {
+	return &Convertor{repo: repo, files: files, bot: bot}
 }
 
 func (c *Convertor) Convert(msg gotgbot.Message) (merger.CreateMessage, error) {
@@ -32,7 +31,7 @@ func (c *Convertor) Convert(msg gotgbot.Message) (merger.CreateMessage, error) {
 	if tghelper.IsForward(msg) { // forward:
 		cm, err = buildMsgAsForward(msg, c.bot, c.files)
 	} else { // not forward:
-		cm, err = buildMsgAsOriginal(msg, c.bot, c.files, c.mm)
+		cm, err = buildMsgAsOriginal(msg, c.bot, c.files, c.repo)
 	}
 	if err != nil {
 		return merger.CreateMessage{}, fmt.Errorf("buildMsg: %s", err)
@@ -40,11 +39,15 @@ func (c *Convertor) Convert(msg gotgbot.Message) (merger.CreateMessage, error) {
 	return *cm, nil
 }
 
-func buildMsgAsOriginal(msg gotgbot.Message, bot *gotgbot.Bot, files blobstore.TempBlobStore, mm kvstore.MessagesMap) (*merger.CreateMessage, error) {
-	replyTo := replyMergerIdFromMsg(msg, mm)
+func buildMsgAsOriginal(msg gotgbot.Message, bot *gotgbot.Bot, files blobstore.TempBlobStore, repo mrepo.MessagesRepository) (*merger.CreateMessage, error) {
+	replyTo, err := replyMergerIdFromMsg(msg, repo)
+	if err != nil {
+		log.Printf("[ERROR] replyMergerIdFromMsg: %s", err)
+		replyTo = nil
+	}
 	firstName := msg.GetSender().FirstName()
 	createMsg := merger.CreateMessage{
-		ReplyId:   (*merger.ID)(replyTo),
+		ReplyId:   replyTo,
 		Date:      time.Unix(msg.Date, 0),
 		Username:  &firstName,
 		Silent:    false, // where prop??
@@ -117,21 +120,18 @@ func getMediaOrNil(original gotgbot.Message, bot *gotgbot.Bot, files blobstore.T
 	return media, nil
 }
 
-func toContID(id int64) kvstore.ContMsgID {
-	return kvstore.ContMsgID(strconv.FormatInt(id, 10))
-}
-
-func replyMergerIdFromMsg(msg gotgbot.Message, mm kvstore.MessagesMap) *string {
+func replyMergerIdFromMsg(msg gotgbot.Message, repo mrepo.MessagesRepository) (*merger.ID, error) {
 	if msg.ReplyToMessage != nil {
-		id, exists, err := mm.ByContID(tghelper.KvStoreScope, toContID(msg.ReplyToMessage.MessageId))
+		messages, err := repo.Get(mrepo.Filter{MsgId: &msg.ReplyToMessage.MessageId})
 		if err != nil {
-			log.Printf("[ERROR] msg from message map: %s", err)
+			return nil, fmt.Errorf("messages from repo: %s", err)
 		}
-		if exists {
-			return (*string)(id)
+		if len(messages) == 0 {
+			return nil, nil
 		}
+		return &messages[0].MergerMsgId, nil
 	}
-	return nil
+	return nil, nil
 }
 
 func downloadMedia(fileId string, hasMediaSpoiler bool, mtype merger.MediaType, bot *gotgbot.Bot, files blobstore.TempBlobStore) (*merger.Media, error) {
@@ -158,6 +158,7 @@ func downloadMedia(fileId string, hasMediaSpoiler bool, mtype merger.MediaType, 
 		Url:     *uri,
 	}, nil
 }
+
 func defineUsername(tgFwd gotgbot.MergedMessageOrigin) *string {
 	if tgFwd.SenderUser != nil { // user
 		return &tgFwd.SenderUser.FirstName

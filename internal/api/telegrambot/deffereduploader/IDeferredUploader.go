@@ -3,8 +3,8 @@ package deffereduploader
 import (
 	"context"
 	"github.com/PaulSonOfLars/gotgbot/v2"
+	mrepo "merger-adapter/internal/repository/messages_repository"
 	"merger-adapter/internal/service/blobstore"
-	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
 	"sync"
 	"time"
@@ -16,12 +16,12 @@ type IDeferredUploader interface {
 
 type Kind uint8
 
-const (
-	Unknown Kind = iota
-	GroupMedia
-	Media
-	Texted
-	Forward
+const ( // db stored kind, then val is fixed
+	Unknown    Kind = 0
+	GroupMedia Kind = 1
+	Media      Kind = 2
+	Texted     Kind = 3
+	Forward    Kind = 4
 )
 
 type MsgWithKind struct {
@@ -36,19 +36,17 @@ var _ IDeferredUploader = (*DeferredUploader)(nil)
 
 type DeferredUploader struct {
 	mu         *sync.RWMutex
-	mm         kvstore.MessagesMap
 	con        IConvertor
 	usersQueue map[int64]*Queue
 	runner     IRunner
 	sender     ISender
 }
 
-func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, bot *gotgbot.Bot, conn merger.Conn) *DeferredUploader {
-	s := NewSender(conn, mm)
+func NewDeferredUploader(repo mrepo.MessagesRepository, files blobstore.TempBlobStore, bot *gotgbot.Bot, conn merger.Conn) *DeferredUploader {
+	s := NewSender(conn, repo)
 	return &DeferredUploader{
 		mu:         new(sync.RWMutex),
-		mm:         mm,
-		con:        NewConvertor(mm, files, bot),
+		con:        NewConvertor(repo, files, bot),
 		usersQueue: make(map[int64]*Queue),
 		runner:     new(Runner),
 		sender:     s,
