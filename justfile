@@ -29,9 +29,6 @@ run *FLAGS:
     --tg-token=$TGTOKEN \
     --tg-chat-id=-4174819149 \
     --tg-x-api-key=e9a8a738-fc38-4b4c-be05-9b9267372b94 \
-    --vk-token=$VKTOKEN \
-    --vk-peer-id=2000000001 \
-    --vk-x-api-key=c58f1554-8284-4926-97cb-8caa9e3e234f \
     --db={{sqlite_db_source_file}} \
     --redis-url=$REDIS_URL
 

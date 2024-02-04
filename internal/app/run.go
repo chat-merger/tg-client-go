@@ -6,7 +6,6 @@ import (
 	"log"
 	grpcside "merger-adapter/internal/api/grpc_merger_client"
 	"merger-adapter/internal/api/telegrambot"
-	"merger-adapter/internal/api/vkontaktebot"
 	"merger-adapter/internal/common/msgs"
 	"merger-adapter/internal/component/sqlite"
 	"merger-adapter/internal/service/blobstore"
@@ -60,21 +59,6 @@ func Run(ctx context.Context, cfg *Config) error {
 	}
 	log.Println(msgs.TelegramAdapterInitialized)
 	go app.run(tgbClient, "vkontakte adapter")
-
-	vkbClient, err := vkontaktebot.InitClient(vkontaktebot.Deps{
-		Token:       cfg.VkBotToken,
-		ApiKey:      cfg.VkXApiKey,
-		PeerId:      cfg.VkPeer,
-		Server:      server,
-		MessagesMap: messagesMap,
-		Files:       files,
-	})
-	if err != nil {
-		return fmt.Errorf("vk client initialization: %s", err)
-	}
-	log.Println(msgs.VkontakteAdapterInitialized)
-
-	go app.run(vkbClient, "vkontakte adapter")
 
 	log.Println(msgs.ApplicationStarted)
 
