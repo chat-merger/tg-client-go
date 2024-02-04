@@ -75,10 +75,12 @@ func buildMsgAsForward(msg gotgbot.Message, bot *gotgbot.Bot, files blobstore.Te
 		Forwarded: make([]merger.Forward, 0),
 	}
 
+	username := defineUsername(msg.ForwardOrigin.MergeMessageOrigin())
+
 	fwd := merger.Forward{
 		Id:       nil,
-		Date:     time.Unix(msg.ForwardDate, 0),
-		Username: &msg.ForwardFrom.FirstName,
+		Date:     time.Unix(msg.ForwardOrigin.GetDate(), 0),
+		Username: username,
 		Text:     &msg.Text,
 		Media:    make([]merger.Media, 0),
 	}
@@ -155,4 +157,18 @@ func downloadMedia(fileId string, hasMediaSpoiler bool, mtype merger.MediaType, 
 		Spoiler: hasMediaSpoiler,
 		Url:     *uri,
 	}, nil
+}
+func defineUsername(tgFwd gotgbot.MergedMessageOrigin) *string {
+	if tgFwd.SenderUser != nil { // user
+		return &tgFwd.SenderUser.FirstName
+	} else if tgFwd.SenderChat != nil { // chat
+		if tgFwd.SenderChat.Title != "" {
+			return &tgFwd.SenderChat.Title
+		} else if tgFwd.SenderChat.Username != "" {
+			return &tgFwd.SenderChat.Username
+		} else if tgFwd.SenderChat.FirstName != "" {
+			return &tgFwd.SenderChat.FirstName
+		}
+	}
+	return nil
 }

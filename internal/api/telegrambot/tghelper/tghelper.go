@@ -12,7 +12,7 @@ func HasSameMediaGroup(a, b gotgbot.Message) bool {
 }
 
 func IsForward(msg gotgbot.Message) bool {
-	return msg.ForwardDate != 0
+	return msg.ForwardOrigin != nil
 }
 
 func IsMedia(msg gotgbot.Message) bool {

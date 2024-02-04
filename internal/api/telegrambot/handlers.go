@@ -41,7 +41,7 @@ func (c *Client) onMergerMessage(msg *merger.Message) {
 	tgMsg, err := c.bot.SendMessage(
 		c.chatID,
 		msg.FormatShort(),
-		&gotgbot.SendMessageOpts{ReplyToMessageId: replyTo},
+		&gotgbot.SendMessageOpts{ReplyParameters: &gotgbot.ReplyParameters{ChatId: replyTo}},
 	)
 	if err != nil {
 		log.Printf("[ERROR] send message to tg: %s", err)
