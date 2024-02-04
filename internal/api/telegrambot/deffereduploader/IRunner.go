@@ -73,7 +73,7 @@ func (r *Runner) Run(
 			case PutMerged:
 				r.prev.msg = merge(r.prev.msg, next.msg)
 				r.prev.kind = next.kind
-				// but expect:
+				// but except:
 				// `r.prev.original = next.original`
 				// then first receive relation merger id
 			}
