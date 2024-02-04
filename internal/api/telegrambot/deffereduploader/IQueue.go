@@ -1,24 +1,26 @@
 package deffereduploader
 
+import "github.com/PaulSonOfLars/gotgbot/v2"
+
 type IQueue interface {
-	Next() <-chan MsgWithKind
+	Next() <-chan gotgbot.Message
 }
 
 type Queue struct {
-	ch chan MsgWithKind
+	ch chan gotgbot.Message
 }
 
-func InitQueue(ch chan MsgWithKind) *Queue {
+func InitQueue(ch chan gotgbot.Message) *Queue {
 	return &Queue{
 		ch: ch,
 	}
 }
 
-func (q *Queue) Next() <-chan MsgWithKind {
+func (q *Queue) Next() <-chan gotgbot.Message {
 	return q.ch
 }
 
-func (q *Queue) Ch() chan<- MsgWithKind {
+func (q *Queue) Ch() chan<- gotgbot.Message {
 	return q.ch
 }
 

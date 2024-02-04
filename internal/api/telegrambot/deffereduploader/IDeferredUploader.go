@@ -2,9 +2,7 @@ package deffereduploader
 
 import (
 	"context"
-	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
-	"merger-adapter/internal/api/telegrambot/tghelper"
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/kvstore"
 	"merger-adapter/internal/service/merger"
@@ -41,10 +39,8 @@ type DeferredUploader struct {
 	mu             *sync.Mutex
 	mm             kvstore.MessagesMap
 	con            IConvertor
-	queue          *Queue
 	usersQueue     map[int64]*Queue
 	runner         IRunner
-	comp           IComparator
 	sender         ISender
 }
 
@@ -55,48 +51,21 @@ func NewDeferredUploader(mm kvstore.MessagesMap, files blobstore.TempBlobStore, 
 		mu:             new(sync.Mutex),
 		mm:             mm,
 		con:            NewConvertor(mm, files, bot),
-		queue:          InitQueue(make(chan MsgWithKind, 500)),
 		usersQueue:     make(map[int64]*Queue),
 		runner:         new(Runner),
-		comp:           NewComparatorImpl(),
 		sender:         s,
 	}
 }
 
 func (d *DeferredUploader) Upload(original gotgbot.Message) error {
-
-	msg, err := d.con.Convert(original)
-	if err != nil {
-		return fmt.Errorf("convert original gotgbot msg to merger: %s", err)
-	}
-	mwk := MsgWithKind{
-		kind:     defineKind(original),
-		original: original,
-		msg:      msg,
-	}
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	q, ok := d.usersQueue[original.GetSender().Id()]
 	if !ok {
-		q = InitQueue(make(chan MsgWithKind, 50))
+		q = InitQueue(make(chan gotgbot.Message, 50))
 		d.usersQueue[original.GetSender().Id()] = q
-		go d.runner.Run(context.Background(), q, d.comp, d.sender, d.releaseTimeout)
+		go d.runner.Run(context.Background(), q, d.sender, d.con, d.releaseTimeout)
 	}
-	q.Ch() <- mwk
+	q.Ch() <- original
 	return nil
-}
-
-func defineKind(msg gotgbot.Message) Kind {
-	switch {
-	case tghelper.IsForward(msg):
-		return Forward
-	case tghelper.IsPartOfMediaGroup(msg):
-		return GroupMedia
-	case tghelper.IsMedia(msg):
-		return Media
-	case tghelper.HasText(msg):
-		return Texted
-	default:
-		return Unknown
-	}
 }
