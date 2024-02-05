@@ -3,6 +3,7 @@ package deffereduploader
 import (
 	"context"
 	"log"
+	"merger-adapter/internal/api/telegrambot/tghelper"
 	"merger-adapter/internal/service/merger"
 	"time"
 )
@@ -57,7 +58,7 @@ func (r *Runner) Run(
 				continue
 			}
 			next := &MsgWithKind{
-				kind:     DefineKind(orig),
+				kind:     tghelper.DefineKind(orig),
 				original: orig,
 				msg:      nextMsg,
 			}

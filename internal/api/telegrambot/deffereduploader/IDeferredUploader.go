@@ -3,6 +3,7 @@ package deffereduploader
 import (
 	"context"
 	"github.com/PaulSonOfLars/gotgbot/v2"
+	"merger-adapter/internal/api/telegrambot/tghelper"
 	mrepo "merger-adapter/internal/repository/messages_repository"
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/merger"
@@ -14,18 +15,8 @@ type IDeferredUploader interface {
 	Upload(msg gotgbot.Message) error
 }
 
-type Kind uint8
-
-const ( // db stored kind, then val is fixed
-	Unknown    Kind = 0
-	GroupMedia Kind = 1
-	Media      Kind = 2
-	Texted     Kind = 3
-	Forward    Kind = 4
-)
-
 type MsgWithKind struct {
-	kind     Kind
+	kind     tghelper.Kind
 	original gotgbot.Message
 	msg      merger.CreateMessage
 }
@@ -72,7 +63,7 @@ func (d *DeferredUploader) Upload(original gotgbot.Message) error {
 			func(msg *MsgWithKind) time.Duration {
 				// форварды приходят с большой задержкой,
 				// поэтому текст надо долго держать и ждать возможных форвардов
-				if msg.kind == Texted {
+				if msg.kind == tghelper.Texted {
 					return 400 * time.Millisecond
 				} else {
 					return 70 * time.Millisecond

@@ -1,7 +1,6 @@
 package deffereduploader
 
 import (
-	"github.com/PaulSonOfLars/gotgbot/v2"
 	"log"
 	"merger-adapter/internal/api/telegrambot/tghelper"
 )
@@ -21,36 +20,21 @@ func Compare(prevMsg *MsgWithKind, nextMsg MsgWithKind) (result CompareResult) {
 	p := prevMsg.kind
 	n := nextMsg.kind
 	switch p {
-	case GroupMedia:
-		if n == GroupMedia && tghelper.HasSameMediaGroup(prevMsg.original, nextMsg.original) {
+	case tghelper.GroupMedia:
+		if n == tghelper.GroupMedia && tghelper.HasSameMediaGroup(prevMsg.original, nextMsg.original) {
 			return PutMerged
 		}
-	case Texted:
-		if n == GroupMedia || n == Forward {
+	case tghelper.Texted:
+		if n == tghelper.GroupMedia || n == tghelper.Forward {
 			log.Println("[Compare] case Texted > PutMerged")
 			return PutMerged
 		}
-	case Forward:
-		if n == Forward {
+	case tghelper.Forward:
+		if n == tghelper.Forward {
 			return PutMerged
 		}
 	default:
 	}
 
 	return PutNext
-}
-
-func DefineKind(msg gotgbot.Message) Kind {
-	switch {
-	case tghelper.IsForward(msg):
-		return Forward
-	case tghelper.IsPartOfMediaGroup(msg):
-		return GroupMedia
-	case tghelper.IsMedia(msg):
-		return Media
-	case tghelper.HasText(msg):
-		return Texted
-	default:
-		return Unknown
-	}
 }

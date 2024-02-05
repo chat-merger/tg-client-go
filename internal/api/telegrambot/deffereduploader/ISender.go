@@ -35,8 +35,8 @@ func (s *Sender) Send(msg MsgWithKind) error {
 		MsgId:            msg.original.MessageId,
 		SenderId:         msg.original.GetSender().Id(),
 		SenderFirstName:  msg.original.GetSender().FirstName(),
-		Kind:             mrepo.Kind(msg.kind),
-		HasMedia:         msg.kind == Media || msg.kind == GroupMedia,
+		Kind:             msg.kind,
+		HasMedia:         msg.kind.IsMedia(),
 		CreatedAt:        msg.original.Date,
 	})
 

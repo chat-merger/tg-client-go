@@ -5,8 +5,9 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"log"
-	"merger-adapter/internal/api/telegrambot/deffereduploader"
+	"merger-adapter/internal/api/telegrambot/msgdecomposer"
 	mrepo "merger-adapter/internal/repository/messages_repository"
+	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/merger"
 )
 
@@ -28,55 +29,119 @@ func (c *Client) listenServerMessages() error {
 	}
 }
 
-func onMergerMessage(msg *merger.Message, bot *gotgbot.Bot, repo mrepo.MessagesRepository, chatID int64) {
-	// reply
-	replyTo, err := replyTgIdFromMsg(msg, repo, chatID)
-	if err != nil {
-		log.Printf("[ERROR] replyTgIdFromMsg: %s", err)
-		replyTo = 0
-	}
+type Callback struct {
+	bot    *gotgbot.Bot
+	chatId int64
+	files  blobstore.TempBlobStore
+	repo   mrepo.MessagesRepository
+}
 
-	tgMsg, err := bot.SendMessage(
-		chatID,
+func (c *Callback) SendTexted(msg merger.Message) (*gotgbot.Message, error) {
+	replyTo := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendMessage(
+		c.chatId,
 		msg.FormatShort(),
-		&gotgbot.SendMessageOpts{ReplyParameters: &gotgbot.ReplyParameters{ChatId: replyTo}},
+		&gotgbot.SendMessageOpts{
+			ReplyParameters:     replyTo,
+			DisableNotification: msg.Silent,
+		},
 	)
 	if err != nil {
-		log.Printf("[ERROR] send message to tg: %s", err)
-		return
+		return nil, fmt.Errorf("send message to tg: %s", err)
 	}
-	err = saveToRepo(repo, msg, tgMsg)
+	return tgMsg, nil
+}
+
+func (c *Callback) SendMediaGroup(msgs []merger.Message) ([]gotgbot.Message, error) {
+	c.bot.SendMediaGroup()
+}
+
+func (c *Callback) SendSticker(msg merger.Message) (*gotgbot.Message, error) {
+
+}
+func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
+
+	//if len(msg.Media) == 0 {
+	//	return nil, errors.New("media is empty")
+	//}
+	photo := msg.Media[0]
+	//if photo.Kind != merger.Photo {
+	//	return nil, errors.New("media is not photo")
+	//}
+	var b []byte
+	reader, err := c.files.Get(photo.Url)
 	if err != nil {
-		log.Printf("[ERROR] save message to repo: %s", err)
+		return nil, fmt.Errorf("get photo from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendPhoto(
+		c.chatId,
+		b,
+		&gotgbot.SendPhotoOpts{
+			Caption:         stringOrEmpty(msg.Text),
+			ReplyParameters: replyParams,
+			HasSpoiler:      photo.Spoiler,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send message to tg: %s", err)
+	}
+	return tgMsg, nil
+}
+
+func (c *Callback) SendAudio(msg merger.Message) (*gotgbot.Message, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Callback) SendVideo(msg merger.Message) (*gotgbot.Message, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Callback) SendDocument(msg merger.Message) (*gotgbot.Message, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *Callback) SendForward(msg merger.Message) (*gotgbot.Message, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func onMergerMessage(msg *merger.Message, bot *gotgbot.Bot, repo mrepo.MessagesRepository, callback msgdecomposer.ISender, decomposer msgdecomposer.IMessageDecomposer, chatID int64) {
+	err := decomposer.Decompose(*msg, callback)
+	if err != nil {
+		log.Printf("[ERROR] decompose msg: %s", err)
 		return
 	}
 }
 
-func saveToRepo(repo mrepo.MessagesRepository, msg *merger.Message, tgMsg *gotgbot.Message) error {
-	kind := deffereduploader.DefineKind(*tgMsg)
-	return repo.Add(mrepo.Message{
-		ReplyMergerMsgId: msg.ReplyId,
-		MergerMsgId:      msg.Id,
-		ChatId:           tgMsg.Chat.Id,
-		MsgId:            tgMsg.MessageId,
-		SenderId:         tgMsg.GetSender().Id(),
-		SenderFirstName:  tgMsg.GetSender().FirstName(),
-		Kind:             mrepo.Kind(kind),
-		HasMedia:         kind == deffereduploader.Media || kind == deffereduploader.GroupMedia,
-		CreatedAt:        tgMsg.Date,
-	})
-}
-
-func replyTgIdFromMsg(msg *merger.Message, repo mrepo.MessagesRepository, chatId int64) (int64, error) {
+func replyParametersOrNil(msg merger.Message, repo mrepo.MessagesRepository, chatId int64) *gotgbot.ReplyParameters {
 	if msg.ReplyId != nil {
 		messages, err := repo.Get(mrepo.Filter{ChatId: &chatId, MergerMsgId: msg.ReplyId})
 		if err != nil {
-			return 0, fmt.Errorf("messages from repo: %s", err)
+			log.Printf("[ERROR] messages from repo: %s", err)
+			return nil
 		}
 		if len(messages) == 0 {
-			return 0, nil
+			return nil
 		}
-		return messages[0].MsgId, nil
+		return &gotgbot.ReplyParameters{
+			MessageId: messages[0].MsgId,
+		}
 	}
-	return 0, nil
+	return nil
+}
+
+func stringOrEmpty(str *string) string {
+	if str == nil {
+		return ""
+	} else {
+		return *str
+	}
 }
