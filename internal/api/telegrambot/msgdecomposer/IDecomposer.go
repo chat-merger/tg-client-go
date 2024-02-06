@@ -21,27 +21,41 @@ var (
 	ErrUnknownMediaType = errors.New("unknown media type")
 )
 
-type DeferredCallback func(callback ISender) (*gotgbot.Message, error)
+//type DeferredCallback func(callback ISender) ([]gotgbot.Message, error)
+
+type Pair struct {
+	orig gotgbot.Message
+	msg  merger.Message
+}
 
 func (d *MessageDecomposer) Decompose(msg merger.Message, sender ISender) error {
 
 	for {
-		callbacks := make([]DeferredCallback, 0)
+		pairs := make([]Pair, 0)
 
-		if len(msg.Media) == 1 && len(callbacks) == 0 {
+		if len(msg.Media) == 1 && len(pairs) == 0 {
 			singleMediaMsg, poorMsg := pullSingleMedia(msg)
 			msg = poorMsg
-			callbacks = append(callbacks, sendSingleMedia(singleMediaMsg))
+			out, err := sendSingleMedia(singleMediaMsg, sender)
+			if err != nil {
+				return fmt.Errorf("send single media: %s", err)
+			}
+			pairs = append(pairs, out)
 
 		} else if len(msg.Media) > 1 {
 			mediaMsgs, poorMsg := pullMediaGroups(msg)
 			msg = poorMsg
-			callbacks = append(callbacks, sendSingleMedia(singleMediaMsg))
+			group, err := sendMediaGroups(mediaMsgs, sender)
+			if err != nil {
+				return fmt.Errorf("send media group: %s", err)
+			}
+			pairs = append(pairs, group...)
 
 		} else if len(msg.Forwarded) > 0 {
 			// todo if reply + text -=> send text+repl
 			// todo if text -> sendTexted
 			// todo final send each forward
+
 		} else if msg.Text != nil && *msg.Text != "" {
 
 		} else if msg.ReplyId != nil {
@@ -54,57 +68,55 @@ func (d *MessageDecomposer) Decompose(msg merger.Message, sender ISender) error 
 	}
 }
 
-func pullMediaGroups(msg merger.Message) (extracted map[merger.MediaType][]merger.Message, poor merger.Message) {
+func pullMediaGroups(msg merger.Message) (extracted map[merger.MediaType]merger.Message, poor merger.Message) {
 	poor = msg
 	poor.Media = nil
 
 	for _, media := range msg.Media {
-		msgs, ok := extracted[media.Kind]
+		ex, ok := extracted[media.Kind]
 		if !ok {
-			msgs = make([]merger.Message, 0)
+			ex = msg
+			ex.Forwarded = nil
+			ex.Media = make([]merger.Media, 0)
+			ex.Text = nil
+			if len(extracted) == 0 && msg.Text != nil {
+				ex.Text = msg.Text
+			}
 		}
-		ex := msg
-		ex.Media = []merger.Media{media}
-		ex.Forwarded = nil
-		msgs = append(msgs, ex)
-		extracted[media.Kind] = msgs
+		ex.Media = append(ex.Media, media)
+		extracted[media.Kind] = ex
 	}
+	return extracted, poor
 }
 
-func sendMediaGroups(msgMap map[merger.MediaType][]merger.Message) []DeferredCallback {
-	cbks := make([]DeferredCallback, 0)
+func sendMediaGroups(msgMap map[merger.MediaType]merger.Message, sender ISender) ([]Pair, error) {
+	msgs := make([]Pair, 0)
 
-	for kind, msgSlice := range msgMap {
+	for kind, msg := range msgMap {
 		//isStickerGroup := false
 		if kind == merger.Sticker {
-			for _, sticker := range msgSlice {
-				cbks = append(cbks, func(callback ISender) (*gotgbot.Message, error) {
-					return callback.SendSticker(sticker)
+			orig, err := sender.SendSticker(msg)
+			if err != nil {
+				return nil, fmt.Errorf("send sticker: %s", err)
+			}
+			msgs = append(msgs, Pair{
+				orig: *orig,
+				msg:  msg,
+			})
+		} else {
+			group, err := sender.SendMediaGroup(msg)
+			if err != nil {
+				return nil, fmt.Errorf("send media group: %s", err)
+			}
+			for _, origin := range group {
+				msgs = append(msgs, Pair{
+					orig: origin,
+					msg:  msg,
 				})
 			}
-		} else {
-			cbks = append(cbks, func(callback ISender) (*gotgbot.Message, error) {
-				group, err := callback.SendMediaGroup(msgSlice)
-				if err != nil {
-					return nil, fmt.Errorf("send media group: %s", err)
-				}
-				media := msgSlice[0].Media
-				switch media {
-				case merger.Audio:
-					return callback.SendAudio(msgSlice)
-				case merger.Video:
-					return callback.SendVideo(msgSlice)
-				case merger.File:
-					return callback.SendDocument(msgSlice)
-				case merger.Photo:
-					return callback.SendPhoto(msgSlice)
-				}
-				return nil, ErrUnknownMediaType
-			},
-			)
 		}
 	}
-	return cbks
+	return msgs, nil
 }
 
 func pullSingleMedia(msg merger.Message) (extracted merger.Message, poor merger.Message) {
@@ -118,23 +130,31 @@ func pullSingleMedia(msg merger.Message) (extracted merger.Message, poor merger.
 	return extracted, msg
 }
 
-func sendSingleMedia(msg merger.Message) DeferredCallback {
-	return func(callback ISender) (*gotgbot.Message, error) {
-		media := msg.Media[0]
-		switch media.Kind {
-		case merger.Audio:
-			return callback.SendAudio(msg)
-		case merger.Video:
-			return callback.SendVideo(msg)
-		case merger.File:
-			return callback.SendDocument(msg)
-		case merger.Photo:
-			return callback.SendPhoto(msg)
-		case merger.Sticker:
-			return callback.SendSticker(msg)
-		}
-		return nil, ErrUnknownMediaType
+func sendSingleMedia(msg merger.Message, sender ISender) (Pair, error) {
+	media := msg.Media[0]
+	var orig *gotgbot.Message
+	var err error
+	switch media.Kind {
+	case merger.Audio:
+		orig, err = sender.SendAudio(msg)
+	case merger.Video:
+		orig, err = sender.SendVideo(msg)
+	case merger.File:
+		orig, err = sender.SendDocument(msg)
+	case merger.Photo:
+		orig, err = sender.SendPhoto(msg)
+	case merger.Sticker:
+		orig, err = sender.SendSticker(msg)
+	default:
+		return Pair{}, ErrUnknownMediaType
 	}
+	if err != nil {
+		return Pair{}, fmt.Errorf("send some single file: %s", err)
+	}
+	return Pair{
+		orig: *orig,
+		msg:  msg,
+	}, err
 }
 
 func saveToRepo(repo mrepo.MessagesRepository, msg *merger.Message, tgMsg *gotgbot.Message) error {

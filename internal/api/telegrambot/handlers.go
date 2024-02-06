@@ -1,6 +1,7 @@
 package telegrambot
 
 import (
+	"errors"
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
@@ -52,22 +53,95 @@ func (c *Callback) SendTexted(msg merger.Message) (*gotgbot.Message, error) {
 	return tgMsg, nil
 }
 
-func (c *Callback) SendMediaGroup(msgs []merger.Message) ([]gotgbot.Message, error) {
-	c.bot.SendMediaGroup()
+func (c *Callback) SendMediaGroup(msg merger.Message) ([]gotgbot.Message, error) {
+	input := make([]gotgbot.InputMedia, 0)
+	for _, media := range msg.Media {
+		var b []byte
+		reader, err := c.files.Get(media.Url)
+		if err != nil {
+			return nil, fmt.Errorf("get photo from files: %s", err)
+		}
+		_, err = reader.Read(b)
+		if err != nil {
+			return nil, fmt.Errorf("read bytes from reader: %s", err)
+		}
+		var imedia gotgbot.InputMedia
+		switch media.Kind {
+		case merger.Audio:
+			imedia = gotgbot.InputMediaAudio{
+				Media:   b,
+				Caption: stringOrEmpty(msg.Text),
+				Title:   media.Url,
+			}
+		case merger.Video:
+			imedia = gotgbot.InputMediaVideo{
+				Media:      b,
+				Caption:    stringOrEmpty(msg.Text),
+				HasSpoiler: media.Spoiler,
+			}
+		case merger.File:
+			imedia = gotgbot.InputMediaDocument{
+				Media:   b,
+				Caption: stringOrEmpty(msg.Text),
+			}
+		case merger.Photo:
+			imedia = gotgbot.InputMediaPhoto{
+				Media:      b,
+				Caption:    stringOrEmpty(msg.Text),
+				HasSpoiler: media.Spoiler,
+			}
+		default:
+			return nil, errors.New("unknown media type")
+		}
+		input = append(input, imedia)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendMediaGroup(
+		c.chatId,
+		input,
+		&gotgbot.SendMediaGroupOpts{
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send media group to tg: %s", err)
+	}
+	return tgMsg, nil
 }
 
 func (c *Callback) SendSticker(msg merger.Message) (*gotgbot.Message, error) {
 
+	sticker := msg.Media[0]
+
+	var b []byte
+	reader, err := c.files.Get(sticker.Url)
+	if err != nil {
+		return nil, fmt.Errorf("get sticker from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendSticker(
+		c.chatId,
+		b,
+		&gotgbot.SendStickerOpts{
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send sticker to tg: %s", err)
+	}
+	return tgMsg, nil
 }
+
 func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
 
-	//if len(msg.Media) == 0 {
-	//	return nil, errors.New("media is empty")
-	//}
 	photo := msg.Media[0]
-	//if photo.Kind != merger.Photo {
-	//	return nil, errors.New("media is not photo")
-	//}
+
 	var b []byte
 	reader, err := c.files.Get(photo.Url)
 	if err != nil {
@@ -82,35 +156,130 @@ func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
 		c.chatId,
 		b,
 		&gotgbot.SendPhotoOpts{
-			Caption:         stringOrEmpty(msg.Text),
-			ReplyParameters: replyParams,
-			HasSpoiler:      photo.Spoiler,
+			Caption:             stringOrEmpty(msg.Text),
+			ReplyParameters:     replyParams,
+			HasSpoiler:          photo.Spoiler,
+			DisableNotification: msg.Silent,
 		},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("send message to tg: %s", err)
+		return nil, fmt.Errorf("send photo to tg: %s", err)
 	}
 	return tgMsg, nil
 }
 
 func (c *Callback) SendAudio(msg merger.Message) (*gotgbot.Message, error) {
-	//TODO implement me
-	panic("implement me")
+	audio := msg.Media[0]
+
+	var b []byte
+	reader, err := c.files.Get(audio.Url)
+	if err != nil {
+		return nil, fmt.Errorf("get audio from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendAudio(
+		c.chatId,
+		b,
+		&gotgbot.SendAudioOpts{
+			Caption:             stringOrEmpty(msg.Text),
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+			Title:               audio.Url,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send audio to tg: %s", err)
+	}
+	return tgMsg, nil
 }
 
 func (c *Callback) SendVideo(msg merger.Message) (*gotgbot.Message, error) {
-	//TODO implement me
-	panic("implement me")
+	video := msg.Media[0]
+
+	var b []byte
+	reader, err := c.files.Get(video.Url)
+	if err != nil {
+		return nil, fmt.Errorf("get video from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendVideo(
+		c.chatId,
+		b,
+		&gotgbot.SendVideoOpts{
+			Caption:             stringOrEmpty(msg.Text),
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+			HasSpoiler:          video.Spoiler,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send video to tg: %s", err)
+	}
+	return tgMsg, nil
 }
 
 func (c *Callback) SendDocument(msg merger.Message) (*gotgbot.Message, error) {
-	//TODO implement me
-	panic("implement me")
+	document := msg.Media[0]
+
+	var b []byte
+	reader, err := c.files.Get(document.Url)
+	if err != nil {
+		return nil, fmt.Errorf("get document from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.SendDocument(
+		c.chatId,
+		b,
+		&gotgbot.SendDocumentOpts{
+			Caption:             stringOrEmpty(msg.Text),
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send document to tg: %s", err)
+	}
+	return tgMsg, nil
 }
 
-func (c *Callback) SendForward(msg merger.Message) (*gotgbot.Message, error) {
-	//TODO implement me
-	panic("implement me")
+func (c *Callback) SendSingleForward(msg merger.Message) (*gotgbot.Message, error) {
+	forward := msg.Forwarded[0]
+
+	var b []byte
+	reader, err := c.files.Get(forward.Url)
+	if err != nil {
+		return nil, fmt.Errorf("get forward from files: %s", err)
+	}
+	_, err = reader.Read(b)
+	if err != nil {
+		return nil, fmt.Errorf("read bytes from reader: %s", err)
+	}
+	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	tgMsg, err := c.bot.ForwardMessage(
+		c.chatId,
+		b,
+		&gotgbot.ForwardMessageOptss{
+			Caption:             stringOrEmpty(msg.Text),
+			ReplyParameters:     replyParams,
+			DisableNotification: msg.Silent,
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("send forward to tg: %s", err)
+	}
+	return tgMsg, nil
 }
 
 func onMergerMessage(msg *merger.Message, bot *gotgbot.Bot, repo mrepo.MessagesRepository, callback msgdecomposer.ISender, decomposer msgdecomposer.IMessageDecomposer, chatID int64) {
