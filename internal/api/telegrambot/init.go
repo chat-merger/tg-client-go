@@ -46,6 +46,7 @@ func InitClient(deps Deps) (*Client, error) {
 			bot,
 			conn,
 		),
+		files: deps.Files,
 	}
 	disp.AddHandler(handlers.NewMessage(c.filter, c.onTelegramCreatedMessage))
 

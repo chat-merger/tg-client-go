@@ -32,6 +32,15 @@ run *FLAGS:
     --db={{sqlite_db_source_file}} \
     --redis-url=$REDIS_URL
 
+run2 *FLAGS:
+    go run  {{FLAGS}} ./cmd/bot \
+    --host='localhost:32256' \
+    --tg-token=$TG2 \
+    --tg-chat-id=767715387 \
+    --tg-x-api-key=737ef350-8ca1-4a2b-99af-5fcfc996dd9a \
+    --db={{sqlite_db_source_file}} \
+    --redis-url=$REDIS_URL
+
 build *FLAGS:
     go build -o {{build_output_file}} {{FLAGS}}  ./cmd/bot
 

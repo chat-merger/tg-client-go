@@ -52,15 +52,29 @@ func (d *MessageDecomposer) Decompose(msg merger.Message, sender ISender) error 
 			pairs = append(pairs, group...)
 
 		} else if len(msg.Forwarded) > 0 {
+			msg.Forwarded = nil
 			// todo if reply + text -=> send text+repl
 			// todo if text -> sendTexted
 			// todo final send each forward
 
-		} else if msg.Text != nil && *msg.Text != "" {
+		} else if msg.Text != nil && *msg.Text != "" && len(pairs) == 0 {
+			out, err := sender.SendTexted(msg)
+			if err != nil {
+				return fmt.Errorf("send texted: %s", err)
+			}
+			pairs = append(pairs, Pair{
+				orig: *out,
+				msg:  msg,
+			})
+			msg.Text = nil
 
-		} else if msg.ReplyId != nil {
+		} else if msg.ReplyId != nil && len(pairs) == 0 {
+			msg.ReplyId = nil
+			// todo
 
-		} else if msg.Username != nil {
+		} else if msg.Username != nil && len(pairs) == 0 {
+			msg.Username = nil
+			// todo
 
 		} else {
 			return nil
@@ -127,7 +141,7 @@ func pullSingleMedia(msg merger.Message) (extracted merger.Message, poor merger.
 	poor = msg
 	poor.Media = poor.Media[1:]
 
-	return extracted, msg
+	return extracted, poor
 }
 
 func sendSingleMedia(msg merger.Message, sender ISender) (Pair, error) {

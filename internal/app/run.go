@@ -17,7 +17,7 @@ func Run(ctx context.Context, cfg *Config) error {
 
 	// blobstore
 	files, err := blobstore.InitRedis(blobstore.Config{
-		FilesLifetime: time.Second * 20,
+		FilesLifetime: time.Minute * 10,
 		RedisUrl:      cfg.RedisUrl,
 	})
 	if err != nil {

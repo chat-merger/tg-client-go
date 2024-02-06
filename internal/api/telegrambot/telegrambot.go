@@ -16,6 +16,7 @@ type Client struct {
 	chatID  int64
 	repo    mrepo.MessagesRepository
 	du      deffereduploader.IDeferredUploader
+	files   blobstore.TempBlobStore
 }
 
 type Deps struct {

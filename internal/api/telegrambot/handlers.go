@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
+	"io"
 	"log"
 	"merger-adapter/internal/api/telegrambot/msgdecomposer"
 	mrepo "merger-adapter/internal/repository/messages_repository"
@@ -26,7 +27,11 @@ func (c *Client) listenServerMessages() error {
 		if err != nil {
 			return fmt.Errorf("receive update: %s", err)
 		}
-		go onMergerMessage(msg, c.bot, c.repo, c.chatID)
+		go onMergerMessage(
+			msg,
+			&Callback{c.bot, c.chatID, c.files, c.repo},
+			&msgdecomposer.MessageDecomposer{},
+		)
 	}
 }
 
@@ -56,12 +61,11 @@ func (c *Callback) SendTexted(msg merger.Message) (*gotgbot.Message, error) {
 func (c *Callback) SendMediaGroup(msg merger.Message) ([]gotgbot.Message, error) {
 	input := make([]gotgbot.InputMedia, 0)
 	for _, media := range msg.Media {
-		var b []byte
 		reader, err := c.files.Get(media.Url)
 		if err != nil {
 			return nil, fmt.Errorf("get photo from files: %s", err)
 		}
-		_, err = reader.Read(b)
+		b, err := io.ReadAll(reader)
 		if err != nil {
 			return nil, fmt.Errorf("read bytes from reader: %s", err)
 		}
@@ -114,12 +118,11 @@ func (c *Callback) SendSticker(msg merger.Message) (*gotgbot.Message, error) {
 
 	sticker := msg.Media[0]
 
-	var b []byte
 	reader, err := c.files.Get(sticker.Url)
 	if err != nil {
 		return nil, fmt.Errorf("get sticker from files: %s", err)
 	}
-	_, err = reader.Read(b)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read bytes from reader: %s", err)
 	}
@@ -142,12 +145,11 @@ func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
 
 	photo := msg.Media[0]
 
-	var b []byte
 	reader, err := c.files.Get(photo.Url)
 	if err != nil {
 		return nil, fmt.Errorf("get photo from files: %s", err)
 	}
-	_, err = reader.Read(b)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read bytes from reader: %s", err)
 	}
@@ -171,12 +173,11 @@ func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
 func (c *Callback) SendAudio(msg merger.Message) (*gotgbot.Message, error) {
 	audio := msg.Media[0]
 
-	var b []byte
 	reader, err := c.files.Get(audio.Url)
 	if err != nil {
 		return nil, fmt.Errorf("get audio from files: %s", err)
 	}
-	_, err = reader.Read(b)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read bytes from reader: %s", err)
 	}
@@ -200,12 +201,11 @@ func (c *Callback) SendAudio(msg merger.Message) (*gotgbot.Message, error) {
 func (c *Callback) SendVideo(msg merger.Message) (*gotgbot.Message, error) {
 	video := msg.Media[0]
 
-	var b []byte
 	reader, err := c.files.Get(video.Url)
 	if err != nil {
 		return nil, fmt.Errorf("get video from files: %s", err)
 	}
-	_, err = reader.Read(b)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read bytes from reader: %s", err)
 	}
@@ -229,12 +229,11 @@ func (c *Callback) SendVideo(msg merger.Message) (*gotgbot.Message, error) {
 func (c *Callback) SendDocument(msg merger.Message) (*gotgbot.Message, error) {
 	document := msg.Media[0]
 
-	var b []byte
 	reader, err := c.files.Get(document.Url)
 	if err != nil {
 		return nil, fmt.Errorf("get document from files: %s", err)
 	}
-	_, err = reader.Read(b)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, fmt.Errorf("read bytes from reader: %s", err)
 	}
@@ -255,35 +254,36 @@ func (c *Callback) SendDocument(msg merger.Message) (*gotgbot.Message, error) {
 }
 
 func (c *Callback) SendSingleForward(msg merger.Message) (*gotgbot.Message, error) {
-	forward := msg.Forwarded[0]
-
-	var b []byte
-	reader, err := c.files.Get(forward.Url)
-	if err != nil {
-		return nil, fmt.Errorf("get forward from files: %s", err)
-	}
-	_, err = reader.Read(b)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
-	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
-	tgMsg, err := c.bot.ForwardMessage(
-		c.chatId,
-		b,
-		&gotgbot.ForwardMessageOptss{
-			Caption:             stringOrEmpty(msg.Text),
-			ReplyParameters:     replyParams,
-			DisableNotification: msg.Silent,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("send forward to tg: %s", err)
-	}
-	return tgMsg, nil
+	//forward := msg.Forwarded[0]
+	//
+	//var b []byte
+	//reader, err := c.files.Get(forward.Url)
+	//if err != nil {
+	//	return nil, fmt.Errorf("get forward from files: %s", err)
+	//}
+	//_, err = reader.Read(b)
+	//if err != nil {
+	//	return nil, fmt.Errorf("read bytes from reader: %s", err)
+	//}
+	//replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
+	//tgMsg, err := c.bot.ForwardMessage(
+	//	c.chatId,
+	//	b,
+	//	&gotgbot.ForwardMessageOpts{
+	//		Caption:             stringOrEmpty(msg.Text),
+	//		ReplyParameters:     replyParams,
+	//		DisableNotification: msg.Silent,
+	//	},
+	//)
+	//if err != nil {
+	//	return nil, fmt.Errorf("send forward to tg: %s", err)
+	//}
+	//return tgMsg, nil
+	return nil, errors.ErrUnsupported
 }
 
-func onMergerMessage(msg *merger.Message, bot *gotgbot.Bot, repo mrepo.MessagesRepository, callback msgdecomposer.ISender, decomposer msgdecomposer.IMessageDecomposer, chatID int64) {
-	err := decomposer.Decompose(*msg, callback)
+func onMergerMessage(msg *merger.Message, sender msgdecomposer.ISender, decomposer msgdecomposer.IMessageDecomposer) {
+	err := decomposer.Decompose(*msg, sender)
 	if err != nil {
 		log.Printf("[ERROR] decompose msg: %s", err)
 		return

@@ -39,8 +39,7 @@ func InitRedis(cfg Config) (*Redis, error) {
 }
 
 func (r *Redis) Save(data io.Reader) (*URI, error) {
-	b := make([]byte, 0)
-	_, err := data.Read(b)
+	b, err := io.ReadAll(data)
 	if err != nil {
 		return nil, fmt.Errorf("read from input data")
 	}
