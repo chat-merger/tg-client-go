@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
+	"log"
 	"merger-adapter/internal/api/telegrambot/tghelper"
 	mrepo "merger-adapter/internal/repository/messages_repository"
 	"merger-adapter/internal/service/merger"
@@ -14,6 +15,11 @@ type IMessageDecomposer interface {
 }
 
 type MessageDecomposer struct {
+	repo mrepo.MessagesRepository
+}
+
+func NewMessageDecomposer(repo mrepo.MessagesRepository) *MessageDecomposer {
+	return &MessageDecomposer{repo: repo}
 }
 
 var (
@@ -29,10 +35,9 @@ type Pair struct {
 }
 
 func (d *MessageDecomposer) Decompose(msg merger.Message, sender ISender) error {
+	pairs := make([]Pair, 0)
 
 	for {
-		pairs := make([]Pair, 0)
-
 		if len(msg.Media) == 1 && len(pairs) == 0 {
 			singleMediaMsg, poorMsg := pullSingleMedia(msg)
 			msg = poorMsg
@@ -77,14 +82,31 @@ func (d *MessageDecomposer) Decompose(msg merger.Message, sender ISender) error 
 			// todo
 
 		} else {
-			return nil
+			break
 		}
 	}
+	for _, pair := range pairs {
+		err := d.repo.Add(mrepo.Message{
+			ReplyMergerMsgId: pair.msg.ReplyId,
+			MergerMsgId:      pair.msg.Id,
+			ChatId:           pair.orig.Chat.Id,
+			MsgId:            pair.orig.MessageId,
+			SenderId:         pair.orig.GetSender().Id(),
+			SenderFirstName:  pair.orig.GetSender().FirstName(),
+			Kind:             tghelper.DefineKind(pair.orig),
+			HasMedia:         tghelper.DefineKind(pair.orig).IsMedia(),
+			CreatedAt:        pair.orig.Date,
+		})
+		log.Printf("[ERROR] add message to repo: %s", err)
+	}
+	return nil
 }
 
 func pullMediaGroups(msg merger.Message) (extracted map[merger.MediaType]merger.Message, poor merger.Message) {
 	poor = msg
 	poor.Media = nil
+
+	extracted = make(map[merger.MediaType]merger.Message)
 
 	for _, media := range msg.Media {
 		ex, ok := extracted[media.Kind]

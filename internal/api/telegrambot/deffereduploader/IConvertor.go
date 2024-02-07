@@ -9,6 +9,7 @@ import (
 	"merger-adapter/internal/service/blobstore"
 	"merger-adapter/internal/service/merger"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -143,8 +144,8 @@ func downloadMedia(fileId string, hasMediaSpoiler bool, mtype merger.MediaType, 
 	if err != nil {
 		return nil, fmt.Errorf("http get: %s", err)
 	}
-
-	uri, err := files.Save(get.Body)
+	pathParts := strings.Split(file.FilePath, ".")
+	uri, err := files.Save(get.Body, pathParts[len(pathParts)-1])
 	if err != nil {
 		return nil, fmt.Errorf("uri file to blobstore: %s", err)
 	}

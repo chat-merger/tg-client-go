@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
-	"io"
 	"log"
 	"merger-adapter/internal/api/telegrambot/msgdecomposer"
 	mrepo "merger-adapter/internal/repository/messages_repository"
@@ -30,7 +29,7 @@ func (c *Client) listenServerMessages() error {
 		go onMergerMessage(
 			msg,
 			&Callback{c.bot, c.chatID, c.files, c.repo},
-			&msgdecomposer.MessageDecomposer{},
+			msgdecomposer.NewMessageDecomposer(c.repo),
 		)
 	}
 }
@@ -65,32 +64,28 @@ func (c *Callback) SendMediaGroup(msg merger.Message) ([]gotgbot.Message, error)
 		if err != nil {
 			return nil, fmt.Errorf("get photo from files: %s", err)
 		}
-		b, err := io.ReadAll(reader)
-		if err != nil {
-			return nil, fmt.Errorf("read bytes from reader: %s", err)
-		}
 		var imedia gotgbot.InputMedia
 		switch media.Kind {
 		case merger.Audio:
 			imedia = gotgbot.InputMediaAudio{
-				Media:   b,
+				Media:   reader,
 				Caption: stringOrEmpty(msg.Text),
 				Title:   media.Url,
 			}
 		case merger.Video:
 			imedia = gotgbot.InputMediaVideo{
-				Media:      b,
+				Media:      reader,
 				Caption:    stringOrEmpty(msg.Text),
 				HasSpoiler: media.Spoiler,
 			}
 		case merger.File:
 			imedia = gotgbot.InputMediaDocument{
-				Media:   b,
+				Media:   reader,
 				Caption: stringOrEmpty(msg.Text),
 			}
 		case merger.Photo:
 			imedia = gotgbot.InputMediaPhoto{
-				Media:      b,
+				Media:      reader,
 				Caption:    stringOrEmpty(msg.Text),
 				HasSpoiler: media.Spoiler,
 			}
@@ -122,14 +117,10 @@ func (c *Callback) SendSticker(msg merger.Message) (*gotgbot.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get sticker from files: %s", err)
 	}
-	b, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
 	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
 	tgMsg, err := c.bot.SendSticker(
 		c.chatId,
-		b,
+		reader,
 		&gotgbot.SendStickerOpts{
 			ReplyParameters:     replyParams,
 			DisableNotification: msg.Silent,
@@ -149,14 +140,10 @@ func (c *Callback) SendPhoto(msg merger.Message) (*gotgbot.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get photo from files: %s", err)
 	}
-	b, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
 	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
 	tgMsg, err := c.bot.SendPhoto(
 		c.chatId,
-		b,
+		reader,
 		&gotgbot.SendPhotoOpts{
 			Caption:             stringOrEmpty(msg.Text),
 			ReplyParameters:     replyParams,
@@ -177,14 +164,10 @@ func (c *Callback) SendAudio(msg merger.Message) (*gotgbot.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get audio from files: %s", err)
 	}
-	b, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
 	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
 	tgMsg, err := c.bot.SendAudio(
 		c.chatId,
-		b,
+		reader,
 		&gotgbot.SendAudioOpts{
 			Caption:             stringOrEmpty(msg.Text),
 			ReplyParameters:     replyParams,
@@ -205,14 +188,10 @@ func (c *Callback) SendVideo(msg merger.Message) (*gotgbot.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get video from files: %s", err)
 	}
-	b, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
 	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
 	tgMsg, err := c.bot.SendVideo(
 		c.chatId,
-		b,
+		reader,
 		&gotgbot.SendVideoOpts{
 			Caption:             stringOrEmpty(msg.Text),
 			ReplyParameters:     replyParams,
@@ -233,14 +212,10 @@ func (c *Callback) SendDocument(msg merger.Message) (*gotgbot.Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get document from files: %s", err)
 	}
-	b, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, fmt.Errorf("read bytes from reader: %s", err)
-	}
 	replyParams := replyParametersOrNil(msg, c.repo, c.chatId)
 	tgMsg, err := c.bot.SendDocument(
 		c.chatId,
-		b,
+		reader,
 		&gotgbot.SendDocumentOpts{
 			Caption:             stringOrEmpty(msg.Text),
 			ReplyParameters:     replyParams,

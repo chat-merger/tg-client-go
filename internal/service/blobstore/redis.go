@@ -38,12 +38,12 @@ func InitRedis(cfg Config) (*Redis, error) {
 	}, nil
 }
 
-func (r *Redis) Save(data io.Reader) (*URI, error) {
+func (r *Redis) Save(data io.Reader, extension string) (*URI, error) {
 	b, err := io.ReadAll(data)
 	if err != nil {
 		return nil, fmt.Errorf("read from input data")
 	}
-	uri := generateURI()
+	uri := generateURI() + "." + extension
 	ctx := context.Background()
 	err = r.rdb.Set(ctx, uri, b, r.lifetime).Err()
 	if err != nil {
